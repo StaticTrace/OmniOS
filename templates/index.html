@@ -20,7 +20,11 @@
   <div class="card" style="padding:2rem;margin-bottom:1.5rem;background:linear-gradient(135deg,var(--bg-surface) 0%,var(--bg-elevated) 100%);border:1px solid rgba(124,106,247,0.2);position:relative;overflow:hidden;">
     <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:var(--accent-glow);filter:blur(60px);pointer-events:none;"></div>
     <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;position:relative;">
-      <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#a78bfa);display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:700;color:white;flex-shrink:0;box-shadow:0 0 32px var(--accent-glow);">O</div>
+      {% if identity.avatar %}
+      <img src="{{ identity.avatar }}" alt="Avatar" style="width:72px;height:72px;border-radius:50%;object-fit:cover;flex-shrink:0;box-shadow:0 0 32px var(--accent-glow);" />
+      {% else %}
+      <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#a78bfa);display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:700;color:white;flex-shrink:0;box-shadow:0 0 32px var(--accent-glow);">{{ (identity.name or 'O')[0] | upper }}</div>
+      {% endif %}
       <div>
         <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:0.25rem;">{{ identity.name }}</h1>
         <div style="color:var(--accent-text);font-size:0.875rem;margin-bottom:0.5rem;">{{ identity.tagline }}</div>
@@ -80,7 +84,8 @@
       <span style="font-size:0.8rem;color:var(--text-secondary);">OmniOS Hub — running</span>
     </div>
     <div style="font-size:0.75rem;color:var(--text-muted);font-family:var(--font-mono);">Flask 3 · Python 3.12 · Modular Architecture</div>
-    <a href="https://github.com/StaticTrace" target="_blank" rel="noopener" style="font-size:0.75rem;color:var(--accent-text);">GitHub ↗</a>
+    {% set gh = social_links | selectattr('icon', 'equalto', 'github') | list | first | default(None) %}
+    {% if gh %}<a href="{{ gh.url }}" target="_blank" rel="noopener" style="font-size:0.75rem;color:var(--accent-text);">GitHub ↗</a>{% endif %}
   </div>
 
 </div>

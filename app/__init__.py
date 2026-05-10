@@ -3,7 +3,6 @@ from flask import Flask
 
 
 def create_app() -> Flask:
-    # Load .env if it exists (persists GITHUB_PAT and other secrets)
     env_file = Path(__file__).parent.parent / ".env"
     if env_file.exists():
         try:
@@ -16,4 +15,18 @@ def create_app() -> Flask:
 
     from .routes import register_routes
     register_routes(app)
+
+    @app.context_processor
+    def _inject_globals() -> dict:
+        """Inject identity, social_links, pages, and ui config into every template."""
+        from .config import IDENTITY, SOCIAL_LINKS, PAGES
+        from . import config_manager as _cm
+        ui = _cm.get_section_values("ui")
+        return dict(
+            identity=IDENTITY,
+            social_links=SOCIAL_LINKS,
+            pages=PAGES,
+            sidebar_label=ui.get("sidebar_label", "Personal OS"),
+        )
+
     return app

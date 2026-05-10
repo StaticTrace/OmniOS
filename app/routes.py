@@ -66,7 +66,7 @@ def register_routes(app: Flask) -> None:
 
     @app.route("/contact")
     def contact():
-        return render_template("contact.html", identity=IDENTITY, pages=PAGES)
+        return render_template("contact.html", identity=IDENTITY, social_links=SOCIAL_LINKS, pages=PAGES)
 
     @app.route("/settings")
     def settings():

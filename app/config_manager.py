@@ -23,8 +23,11 @@ Public API:
 """
 
 import json
+import logging
 from copy import deepcopy
 from pathlib import Path
+
+_log = logging.getLogger(__name__)
 
 BASE_DIR       = Path(__file__).parent.parent
 CONFIG_FILE    = BASE_DIR / ".omnios-config.json"    # session overrides
@@ -491,8 +494,8 @@ def _reload_into_app() -> None:
             for pid, key, label, icon, route in _PAGE_DEFS
             if pg.get(key, True)
         ]
-    except Exception:
-        pass
+    except Exception as exc:
+        _log.error("_reload_into_app failed: %s", exc, exc_info=True)
 
 
 # Apply persisted config on first import

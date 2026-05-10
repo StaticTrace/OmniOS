@@ -85,10 +85,14 @@
       </nav>
 
       <div class="sidebar-profile">
-        <div class="profile-avatar">O</div>
+        {% if identity.avatar %}
+        <img src="{{ identity.avatar }}" alt="Avatar" class="profile-avatar" style="border-radius:50%;object-fit:cover;width:32px;height:32px;" />
+        {% else %}
+        <div class="profile-avatar">{{ (identity.name or 'O')[0] | upper }}</div>
+        {% endif %}
         <div class="profile-info">
-          <div class="profile-name">OmniOS Hub</div>
-          <div class="profile-tag">Personal OS</div>
+          <div class="profile-name">{{ identity.name or 'OmniOS Hub' }}</div>
+          <div class="profile-tag">{{ sidebar_label or 'Personal OS' }}</div>
         </div>
         <button id="export-zip-btn" title="Export project as ZIP" style="margin-left:auto;flex-shrink:0;width:28px;height:28px;border-radius:var(--radius-sm);background:var(--bg-elevated);border:1px solid var(--border-soft);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--transition);color:var(--text-muted);" onmouseenter="this.style.background='var(--bg-hover)';this.style.color='var(--text-primary)'" onmouseleave="this.style.background='var(--bg-elevated)';this.style.color='var(--text-muted)'">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
