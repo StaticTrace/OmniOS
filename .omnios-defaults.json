@@ -5,10 +5,13 @@
     "bio": "A private, modular digital operating system built around you — unified profile, dashboard, social hub, notifications, and extensible modules so you can add or remove features as your needs evolve. Clean, minimal UI and a developer-friendly architecture for fast customization.",
     "avatar": ""
   },
+  "social_links": {
+    "links": []
+  },
   "notifications": {
     "github_enabled": true,
     "youtube_enabled": true,
-    "rss_enabled": false
+    "rss_enabled": true
   },
   "ui": {
     "github_username": "StaticTrace",
