@@ -208,3 +208,4 @@ MIT — free to use, fork, and self-host.
 ---
 
 Made by [@StaticTrace](https://github.com/StaticTrace)
+1
