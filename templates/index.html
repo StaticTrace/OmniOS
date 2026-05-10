@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}OmniOS Hub — Home{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div>
+    <div class="topbar-title">Home</div>
+    <div class="topbar-subtitle" id="live-time"></div>
+  </div>
+  <div class="topbar-actions">
+    <span class="tag">v1.0</span>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:760px;margin:0 auto;">
+
+  <!-- Identity Card -->
+  <div class="card" style="padding:2rem;margin-bottom:1.5rem;background:linear-gradient(135deg,var(--bg-surface) 0%,var(--bg-elevated) 100%);border:1px solid rgba(124,106,247,0.2);position:relative;overflow:hidden;">
+    <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:var(--accent-glow);filter:blur(60px);pointer-events:none;"></div>
+    <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;position:relative;">
+      <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#a78bfa);display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:700;color:white;flex-shrink:0;box-shadow:0 0 32px var(--accent-glow);">O</div>
+      <div>
+        <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:0.25rem;">{{ identity.name }}</h1>
+        <div style="color:var(--accent-text);font-size:0.875rem;margin-bottom:0.5rem;">{{ identity.tagline }}</div>
+        <p style="color:var(--text-secondary);font-size:0.82rem;max-width:520px;line-height:1.65;">{{ identity.bio }}</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:0.5rem;margin-top:1.5rem;flex-wrap:wrap;">
+      {% for link in social_links %}
+      <a href="{{ link.url }}" target="_blank" rel="noopener" class="btn btn-ghost" style="gap:0.5rem;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          {% if link.icon == 'github' %}<path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+          {% elif link.icon == 'youtube' %}<path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/>
+          {% else %}<circle cx="12" cy="12" r="10"/>{% endif %}
+        </svg>
+        {{ link.platform }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Quick Nav Grid -->
+  <div style="margin-bottom:0.75rem;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Quick Access</div>
+  <div class="grid-3" style="margin-bottom:2rem;">
+    {% set module_descs = {
+      '/dashboard': 'Widgets, stats & activity at a glance',
+      '/social': 'All your platforms in one place',
+      '/notifications': 'Aggregated updates from your sources',
+      '/email-alias': 'Generate & manage email aliases',
+      '/portfolio': 'Projects, work & showcase',
+      '/contact': 'Get in touch'
+    } %}
+    {% set module_icons = {
+      '/dashboard': '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',
+      '/social': '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>',
+      '/notifications': '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+      '/email-alias': '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>',
+      '/portfolio': '<rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+      '/contact': '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>'
+    } %}
+    {% for page in pages %}
+    <a href="{{ page.route }}" class="card" style="display:flex;flex-direction:column;gap:0.75rem;text-decoration:none;cursor:pointer;">
+      <div style="width:36px;height:36px;background:var(--accent-glow);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;border:1px solid rgba(124,106,247,0.2);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{{ module_icons.get(page.route, '<circle cx="12" cy="12" r="10"/>') | safe }}</svg>
+      </div>
+      <div>
+        <div style="font-size:0.875rem;font-weight:600;color:var(--text-primary);margin-bottom:0.2rem;">{{ page.label }}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);">{{ module_descs.get(page.route, '') }}</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  <!-- System Info -->
+  <div class="card" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+    <div style="display:flex;align-items:center;gap:0.5rem;">
+      <div class="glow-dot"></div>
+      <span style="font-size:0.8rem;color:var(--text-secondary);">OmniOS Hub — running</span>
+    </div>
+    <div style="font-size:0.75rem;color:var(--text-muted);font-family:var(--font-mono);">Flask 3 · Python 3.12 · Modular Architecture</div>
+    <a href="https://github.com/StaticTrace" target="_blank" rel="noopener" style="font-size:0.75rem;color:var(--accent-text);">GitHub ↗</a>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+  const t = document.getElementById("live-time");
+  function tick() { t.textContent = new Date().toLocaleString("en-US", { weekday:"long", year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit" }); }
+  tick(); setInterval(tick, 1000);
+</script>
+{% endblock %}
