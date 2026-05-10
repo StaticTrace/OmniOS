@@ -1,0 +1,47 @@
+Perform a full‑system consistency pass across the entire OmniOS codebase.
+
+Review every file, folder, module, component, utility, backend script, frontend UI element, config file, and system file.
+
+Make the entire project consistent by applying the following rules across all of OmniOS:
+
+1. Naming Consistency  
+• Standardize naming conventions for files, folders, variables, functions, components, modules, and config keys
+• Ensure all modules follow the same naming style (camelCase, PascalCase, kebab-case, etc.)
+• Normalize import paths and module structure
+
+2. Code Style Consistency  
+• Apply a unified formatting style across all files
+• Standardize indentation, spacing, line breaks, and structure
+• Ensure consistent use of async/await, error handling, and return patterns
+
+3. Architecture Consistency  
+• Ensure all modules follow the same architecture pattern
+• Standardize how modules load data, save data, update config, and interact with the backend
+• Unify component structure, folder layout, and file organization
+
+4. UI/UX Consistency  
+• Make all UI components follow the same design language
+• Standardize buttons, inputs, modals, cards, lists, icons, and layout spacing
+• Ensure consistent color usage, typography, and component behavior
+
+5. Logic Consistency  
+• Ensure all modules use the same patterns for CRUD operations
+• Standardize how Edit/Delete actions work across Social Hub, Notifications, Dashboard, Portfolio, etc.
+• Normalize how data is validated, saved, loaded, and updated
+
+6. Config Consistency  
+• Ensure all modules use the same config structure
+• Standardize default config keys and naming
+• Ensure Save As Default, Delete From Defaults, and Reset to Defaults work consistently across all modules
+
+7. Clean Up & Remove Inconsistencies  
+• Remove duplicate code, unused files, leftover debug logs, and outdated logic
+• Fix mismatched patterns, inconsistent imports, and conflicting logic
+• Ensure all modules behave the same way and follow the same rules
+
+8. Improve Documentation Consistency  
+• Update README.md to reflect the unified structure
+• Ensure module descriptions follow the same format
+• Document consistent patterns used across OmniOS
+
+After completing the consistency pass, ensure OmniOS runs cleanly with no errors and that all modules behave in a unified, predictable, and standardized way.

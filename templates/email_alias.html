@@ -15,6 +15,23 @@
 
 {% block content %}
 
+<!-- Clear All Confirm Modal -->
+<div class="modal-backdrop" id="clear-all-modal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <div class="modal-title" style="color:#f87171;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        Delete All Aliases?
+      </div>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1.25rem;">All aliases will be permanently removed. This cannot be undone.</p>
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+      <button class="btn btn-ghost" id="cancel-clear-all-btn">Cancel</button>
+      <button class="btn" id="confirm-clear-all-btn" style="background:#ef4444;color:#fff;border-color:#ef4444;font-weight:600;">Delete All</button>
+    </div>
+  </div>
+</div>
+
 <div style="display:grid;grid-template-columns:340px 1fr;gap:1.25rem;align-items:start;">
 
   <!-- Generator -->
@@ -169,7 +186,16 @@ document.getElementById('gen-alias-btn').addEventListener('click', async () => {
 });
 
 document.getElementById('clear-all-btn').addEventListener('click', () => {
-  if (!confirm('Delete all aliases? This cannot be undone.')) return;
+  document.getElementById('clear-all-modal').classList.add('open');
+});
+document.getElementById('cancel-clear-all-btn').addEventListener('click', () => {
+  document.getElementById('clear-all-modal').classList.remove('open');
+});
+document.getElementById('clear-all-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+});
+document.getElementById('confirm-clear-all-btn').addEventListener('click', () => {
+  document.getElementById('clear-all-modal').classList.remove('open');
   save([]); renderAliases(); toast('All aliases cleared', 'info');
 });
 

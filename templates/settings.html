@@ -211,8 +211,27 @@
 
 </div>
 
+<!-- ── Factory Reset Defaults Modal ─────────────────────────────────────────── -->
+<div id="factory-reset-modal" class="modal-backdrop" style="z-index:9999;">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+        Reset to Factory Defaults?
+      </div>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1.25rem;">
+      All saved user defaults will be removed and the Config Editor will revert to factory baseline. Your data (aliases, projects, notes, etc.) is <strong style="color:var(--text-primary);">not</strong> affected.
+    </p>
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+      <button class="btn btn-ghost" id="cancel-factory-reset-btn">Cancel</button>
+      <button class="btn" id="confirm-factory-reset-btn" style="background:var(--warning);color:#000;border-color:var(--warning);font-weight:600;">Reset Defaults</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Wipe Confirmation Modal ──────────────────────────────────────────────── -->
-<div id="wipe-modal-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+<div id="wipe-modal-overlay" class="modal-backdrop" style="z-index:9999;">
   <div style="background:var(--bg-card);border:1px solid rgba(239,68,68,0.4);border-radius:calc(var(--radius)*1.5);padding:2rem;max-width:480px;width:92%;box-shadow:0 24px 64px rgba(0,0,0,0.5);max-height:90vh;overflow-y:auto;">
     <div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:0.85rem;">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -359,8 +378,19 @@ document.getElementById('save-as-default-btn').addEventListener('click', async (
   }
 });
 
-document.getElementById('factory-reset-defaults-btn').addEventListener('click', async () => {
-  if (!confirm('Reset ALL user defaults to factory values? This cannot be undone.')) return;
+document.getElementById('factory-reset-defaults-btn').addEventListener('click', () => {
+  document.getElementById('factory-reset-modal').classList.add('open');
+});
+
+document.getElementById('cancel-factory-reset-btn').addEventListener('click', () => {
+  document.getElementById('factory-reset-modal').classList.remove('open');
+});
+document.getElementById('factory-reset-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+});
+
+document.getElementById('confirm-factory-reset-btn').addEventListener('click', async () => {
+  document.getElementById('factory-reset-modal').classList.remove('open');
   const btn = document.getElementById('factory-reset-defaults-btn');
   btn.disabled = true;
   try {
@@ -562,12 +592,12 @@ function openWipeModal() {
   wipeConfirmBtn.disabled = true;
   wipeConfirmBtn.style.opacity = '0.5';
   wipeConfirmBtn.style.cursor = 'not-allowed';
-  wipeOverlay.style.display = 'flex';
+  wipeOverlay.classList.add('open');
   setTimeout(() => wipeInput.focus(), 80);
 }
 
 function closeWipeModal() {
-  wipeOverlay.style.display = 'none';
+  wipeOverlay.classList.remove('open');
 }
 
 document.getElementById('open-wipe-modal-btn').addEventListener('click', openWipeModal);
