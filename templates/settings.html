@@ -92,6 +92,51 @@
     </button>
   </div>
 
+  <!-- ── Default Config Manager ────────────────────────────────────────── -->
+  <div class="card" id="default-config-card">
+    <div class="card-header" style="margin-bottom:0.5rem;">
+      <div class="card-title" style="font-size:0.95rem;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        Default Config Manager
+      </div>
+      <span id="defaults-status-badge" style="display:none;font-size:0.7rem;background:rgba(124,106,247,0.15);color:var(--accent-text);padding:2px 8px;border-radius:99px;font-weight:600;"></span>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1.25rem;">
+      Your <strong style="color:var(--text-primary);">user defaults</strong> are the baseline the Config Editor resets to. Save your current settings as the new baseline, or delete individual items to permanently remove them from the default.
+    </p>
+
+    <!-- Actions row -->
+    <div style="display:flex;gap:0.65rem;flex-wrap:wrap;margin-bottom:1.25rem;">
+      <button class="btn btn-primary" id="save-as-default-btn" style="font-size:0.82rem;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save Current Config As Default
+      </button>
+      <a href="/config" class="btn btn-ghost" style="font-size:0.82rem;display:inline-flex;align-items:center;gap:0.4rem;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+        Open Config Editor
+      </a>
+    </div>
+
+    <!-- Current user defaults list -->
+    <div id="defaults-list-wrap">
+      <div style="font-size:0.7rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Saved Default Items</div>
+      <div id="defaults-list">
+        <div style="font-size:0.8rem;color:var(--text-muted);padding:0.75rem;background:var(--bg-elevated);border-radius:var(--radius-sm);border:1px solid var(--border-soft);">
+          Loading…
+        </div>
+      </div>
+    </div>
+
+    <!-- Factory reset (soft) -->
+    <div style="margin-top:1.1rem;padding-top:1rem;border-top:1px solid var(--border-soft);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+      <span style="font-size:0.75rem;color:var(--text-muted);">Remove all saved defaults and revert to factory baseline.</span>
+      <button class="btn btn-ghost" id="factory-reset-defaults-btn" style="font-size:0.78rem;color:var(--text-muted);border-color:var(--border-soft);">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+        Reset to Factory Defaults
+      </button>
+    </div>
+  </div>
+
   <!-- ── Identity ───────────────────────────────────────────────────────── -->
   <div class="card">
     <div class="card-header" style="margin-bottom:1rem;">
@@ -100,7 +145,7 @@
         Identity
       </div>
     </div>
-    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;">Your name, tagline, bio, and social links are defined in <code style="font-family:var(--font-mono);font-size:0.75rem;background:var(--bg-elevated);padding:1px 5px;border-radius:3px;">app/config.py</code>. Edit that file directly to update your identity across the entire hub.</p>
+    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;">Your name, tagline, bio, and social links are defined in <code style="font-family:var(--font-mono);font-size:0.75rem;background:var(--bg-elevated);padding:1px 5px;border-radius:3px;">app/config.py</code>. Edit them live in the <a href="/config" style="color:var(--accent-text);">Config Editor</a>.</p>
   </div>
 
   <!-- ── System ─────────────────────────────────────────────────────────── -->
@@ -187,6 +232,132 @@
 {% block extra_js %}
 <script type="module">
 import { apiFetch, toast, copyToClipboard } from '/static/js/core/os.js';
+
+// ── Default Config Manager ─────────────────────────────────────────────────
+const iconDelete = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
+
+function renderDefaultsList(manifest) {
+  const badge  = document.getElementById('defaults-status-badge');
+  const list   = document.getElementById('defaults-list');
+
+  if (!manifest.has_user_defaults || !manifest.sections.length) {
+    badge.style.display = 'none';
+    list.innerHTML = `<div style="font-size:0.8rem;color:var(--text-muted);padding:0.75rem;background:var(--bg-elevated);border-radius:var(--radius-sm);border:1px solid var(--border-soft);text-align:center;">
+      No custom defaults saved yet. Use <strong>Save Current Config As Default</strong> above to create your baseline.
+    </div>`;
+    return;
+  }
+
+  // Count total items
+  let total = 0;
+  manifest.sections.forEach(s => { total += s.items.length; });
+  badge.textContent = `${total} item${total !== 1 ? 's' : ''} saved`;
+  badge.style.display = '';
+
+  list.innerHTML = manifest.sections.map(section => {
+    const rows = section.items.map((item, _) => {
+      const delAttr = item.type === 'list_item'
+        ? `data-section="${section.id}" data-list-key="${item.list_key}" data-list-index="${item.index}"`
+        : `data-section="${section.id}" data-field-key="${item.key}"`;
+
+      const valueDisplay = item.type === 'list_item'
+        ? `<span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.value}</span>`
+        : `<span style="font-size:0.72rem;color:var(--text-muted);">${item.value}${item.modified ? ' <span style="color:var(--accent-text);">•</span>' : ''}</span>`;
+
+      return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.45rem 0.65rem;background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:var(--radius-sm);margin-bottom:0.3rem;">
+        <span style="flex:1;min-width:0;font-size:0.8rem;font-weight:500;color:var(--text-primary);">${item.label}</span>
+        ${valueDisplay}
+        <button class="btn-defaults-delete" ${delAttr} title="Remove from defaults"
+          style="flex-shrink:0;background:none;border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:var(--radius-sm);padding:3px 7px;cursor:pointer;display:flex;align-items:center;gap:3px;font-size:0.7rem;transition:all 0.15s;">
+          ${iconDelete} Remove
+        </button>
+      </div>`;
+    }).join('');
+
+    return `<div style="margin-bottom:0.85rem;">
+      <div style="font-size:0.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.4rem;">${section.label}</div>
+      ${rows}
+    </div>`;
+  }).join('');
+
+  // Bind delete buttons
+  list.querySelectorAll('.btn-defaults-delete').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const payload = { section: btn.dataset.section };
+      if (btn.dataset.fieldKey)   payload.field_key  = btn.dataset.fieldKey;
+      if (btn.dataset.listKey)    payload.list_key   = btn.dataset.listKey;
+      if (btn.dataset.listIndex !== undefined) payload.list_index = parseInt(btn.dataset.listIndex);
+
+      btn.disabled = true;
+      btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 0.8s linear infinite"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`;
+      try {
+        const d = await apiFetch('/api/config/defaults/delete', { method:'POST', body: JSON.stringify(payload) });
+        if (d.ok) {
+          toast(d.message || 'Removed from defaults', 'success');
+          renderDefaultsList(d.manifest);
+        } else {
+          toast(d.message || 'Delete failed', 'error');
+          btn.disabled = false;
+          btn.innerHTML = `${iconDelete} Remove`;
+        }
+      } catch(e) {
+        toast('Error: ' + e.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = `${iconDelete} Remove`;
+      }
+    });
+  });
+}
+
+async function loadDefaultsManifest() {
+  try {
+    const d = await apiFetch('/api/config/defaults');
+    renderDefaultsList(d);
+  } catch(e) {
+    document.getElementById('defaults-list').innerHTML =
+      `<div style="font-size:0.8rem;color:var(--text-muted);">Could not load defaults manifest.</div>`;
+  }
+}
+loadDefaultsManifest();
+
+document.getElementById('save-as-default-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('save-as-default-btn');
+  btn.disabled = true;
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 0.8s linear infinite"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Saving…`;
+  try {
+    const d = await apiFetch('/api/config/defaults/save', { method: 'POST' });
+    if (d.ok) {
+      toast('Current config saved as your new default!', 'success', 4000);
+      renderDefaultsList(d.manifest);
+    } else {
+      toast('Failed to save defaults', 'error');
+    }
+  } catch(e) {
+    toast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Current Config As Default`;
+  }
+});
+
+document.getElementById('factory-reset-defaults-btn').addEventListener('click', async () => {
+  if (!confirm('Reset ALL user defaults to factory values? This cannot be undone.')) return;
+  const btn = document.getElementById('factory-reset-defaults-btn');
+  btn.disabled = true;
+  try {
+    const d = await apiFetch('/api/config/defaults/factory-reset', { method: 'POST' });
+    if (d.ok) {
+      toast('Defaults reset to factory baseline.', 'success');
+      renderDefaultsList({ has_user_defaults: false, sections: [] });
+    } else {
+      toast('Factory reset failed', 'error');
+    }
+  } catch(e) {
+    toast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 // ── Load saved config ─────────────────────────────────────────────────────
 async function loadConfig() {

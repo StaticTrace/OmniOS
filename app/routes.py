@@ -289,11 +289,62 @@ def register_routes(app: Flask) -> None:
         from .config import IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
         return jsonify({"ok": True})
 
-    # ── API: Reset config to defaults ─────────────────────────────────────────
+    # ── API: Reset config to user defaults ────────────────────────────────────
 
     @app.route("/api/config/reset", methods=["POST"])
     def api_config_reset():
         _cfg_mgr.reset()
+        global IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
+        from .config import IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
+        return jsonify({"ok": True})
+
+    # ── API: Get defaults manifest ─────────────────────────────────────────────
+
+    @app.route("/api/config/defaults")
+    def api_config_defaults_get():
+        return jsonify(_cfg_mgr.get_defaults_manifest())
+
+    # ── API: Save current active config as user defaults ──────────────────────
+
+    @app.route("/api/config/defaults/save", methods=["POST"])
+    def api_config_defaults_save():
+        _cfg_mgr.save_as_default()
+        global IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
+        from .config import IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
+        return jsonify({"ok": True, "manifest": _cfg_mgr.get_defaults_manifest()})
+
+    # ── API: Delete an item from user defaults ─────────────────────────────────
+
+    @app.route("/api/config/defaults/delete", methods=["POST"])
+    def api_config_defaults_delete():
+        payload    = request.get_json(silent=True) or {}
+        section_id = payload.get("section")
+        field_key  = payload.get("field_key")
+        list_key   = payload.get("list_key")
+        list_index = payload.get("list_index")
+        if not section_id:
+            return jsonify({"ok": False, "message": "Missing 'section'."}), 400
+        if list_index is not None:
+            try:
+                list_index = int(list_index)
+            except (TypeError, ValueError):
+                return jsonify({"ok": False, "message": "Invalid list_index."}), 400
+        result = _cfg_mgr.delete_from_defaults(
+            section_id=section_id,
+            field_key=field_key,
+            list_key=list_key,
+            list_index=list_index,
+        )
+        global IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
+        from .config import IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
+        result["manifest"] = _cfg_mgr.get_defaults_manifest()
+        return jsonify(result)
+
+    # ── API: Full factory reset (wipes both config files) ─────────────────────
+
+    @app.route("/api/config/defaults/factory-reset", methods=["POST"])
+    def api_config_factory_reset():
+        _cfg_mgr.factory_reset()
         global IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
         from .config import IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
         return jsonify({"ok": True})

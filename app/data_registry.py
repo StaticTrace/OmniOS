@@ -200,3 +200,43 @@ register_module(
     client_keys=[],
     server_cleaner=_clean_data_files,
 )
+
+# Config overrides (.omnios-config.json) — session edits on top of defaults
+def _clean_config_overrides() -> list[str]:
+    done = []
+    cfg_file = BASE_DIR / ".omnios-config.json"
+    if cfg_file.exists():
+        cfg_file.unlink()
+        done.append("Deleted .omnios-config.json (active config overrides)")
+    return done
+
+register_module(
+    id="config-overrides",
+    label="Config Overrides",
+    description="Active configuration edits made in the Config Editor",
+    client_keys=[],
+    server_cleaner=_clean_config_overrides,
+)
+
+# User-defined defaults (.omnios-defaults.json) — custom baseline
+def _clean_config_defaults() -> list[str]:
+    done = []
+    defaults_file = BASE_DIR / ".omnios-defaults.json"
+    if defaults_file.exists():
+        defaults_file.unlink()
+        done.append("Deleted .omnios-defaults.json (user-saved default config)")
+    # Also trigger in-process reload so app reverts to factory
+    try:
+        from .config_manager import _reload_into_app
+        _reload_into_app()
+    except Exception:
+        pass
+    return done
+
+register_module(
+    id="config-defaults",
+    label="Saved Default Config",
+    description="Your custom default configuration saved via 'Save As Default'",
+    client_keys=[],
+    server_cleaner=_clean_config_defaults,
+)
