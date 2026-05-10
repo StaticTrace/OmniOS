@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}Notifications — OmniOS{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div>
+    <div class="topbar-title">Notifications</div>
+    <div class="topbar-subtitle">Aggregated updates from your sources</div>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn btn-ghost" id="refresh-all-btn" style="font-size:0.78rem;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Refresh All
+    </button>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div style="display:grid;grid-template-columns:260px 1fr;gap:1.25rem;align-items:start;">
+
+  <!-- Sources Panel -->
+  <div style="display:flex;flex-direction:column;gap:0.75rem;">
+    <div class="card">
+      <div class="card-header" style="margin-bottom:0.75rem;">
+        <div class="card-title">Sources</div>
+        <button class="btn-icon" id="add-source-btn" title="Add RSS source">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+      <div id="sources-list" style="display:flex;flex-direction:column;gap:0.35rem;"></div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:0.72rem;color:var(--text-muted);line-height:1.6;">
+        Add any RSS feed URL to aggregate content. GitHub and YouTube activity is loaded automatically from your connected profiles.
+      </div>
+    </div>
+  </div>
+
+  <!-- Feed -->
+  <div style="display:flex;flex-direction:column;gap:0.75rem;">
+    <div id="notif-feed" style="display:flex;flex-direction:column;gap:0.75rem;">
+      <div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:2rem;">Loading notifications...</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Add RSS Modal -->
+<div class="modal-backdrop" id="add-source-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add RSS Feed</div>
+      <button class="btn-icon" id="close-source-modal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+      <input type="text" id="rss-label" placeholder="Source name (e.g. Hacker News)" />
+      <input type="url"  id="rss-url"   placeholder="Feed URL (https://...)" />
+      <div style="font-size:0.72rem;color:var(--text-muted);">Example: https://feeds.feedburner.com/TheHackersNews</div>
+      <button class="btn btn-primary" id="save-source-btn">Add Feed</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+import { apiFetch, timeAgo, toast } from '/static/js/core/os.js';
+
+const RSS_KEY = 'omnios-rss-sources';
+const defaultSources = [
+  { id:'github', label:'GitHub', type:'github', enabled:true },
+];
+
+function loadSources() {
+  try { return JSON.parse(localStorage.getItem(RSS_KEY)) || defaultSources; }
+  catch { return defaultSources; }
+}
+function saveSources(s) { localStorage.setItem(RSS_KEY, JSON.stringify(s)); }
+
+let activeSources = loadSources();
+let allItems = [];
+let badge = 0;
+
+function renderSources() {
+  const el = document.getElementById('sources-list');
+  el.innerHTML = '';
+  activeSources.forEach((src, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-radius:var(--radius-sm);cursor:pointer;transition:background 0.15s;';
+    row.onmouseenter = () => row.style.background = 'var(--bg-hover)';
+    row.onmouseleave = () => row.style.background = '';
+    const dot = src.enabled ? 'var(--success)' : 'var(--text-muted)';
+    row.innerHTML = `<div style="width:6px;height:6px;border-radius:50%;background:${dot};flex-shrink:0;"></div>
+      <span style="flex:1;font-size:0.8rem;color:var(--text-secondary);">${src.label}</span>
+      ${src.type !== 'github' ? `<button class="btn-icon del-src" data-i="${i}" style="padding:0.2rem;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>` : ''}`;
+    el.appendChild(row);
+  });
+  el.querySelectorAll('.del-src').forEach(btn => btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    activeSources.splice(+btn.dataset.i, 1);
+    saveSources(activeSources);
+    renderSources(); loadAll();
+  }));
+}
+
+function renderFeed(items) {
+  const feed = document.getElementById('notif-feed');
+  if (!items.length) { feed.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:2rem;">No items yet. Add a source or check back later.</div>'; return; }
+  feed.innerHTML = '';
+  items.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.cssText = 'padding:1rem;display:flex;flex-direction:column;gap:0.35rem;';
+    card.innerHTML = `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.1rem;">
+        <span class="tag" style="font-size:0.62rem;">${item.source}</span>
+        <span style="font-size:0.7rem;color:var(--text-muted);margin-left:auto;">${item.time || ''}</span>
+      </div>
+      <div style="font-size:0.875rem;font-weight:600;color:var(--text-primary);">${item.title}</div>
+      ${item.summary ? `<div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${item.summary}</div>` : ''}
+      ${item.link ? `<a href="${item.link}" target="_blank" rel="noopener" style="font-size:0.72rem;color:var(--accent-text);margin-top:0.1rem;">Read more ↗</a>` : ''}`;
+    feed.appendChild(card);
+  });
+}
+
+async function loadAll() {
+  allItems = [];
+  const feed = document.getElementById('notif-feed');
+  feed.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:2rem;">Loading...</div>';
+
+  // GitHub events
+  const ghSrc = activeSources.find(s => s.type === 'github');
+  if (ghSrc) {
+    try {
+      const d = await apiFetch('/api/github/StaticTrace');
+      (d.events || []).slice(0,8).forEach(ev => {
+        const typeMap = { PushEvent:'Push', CreateEvent:'Create', WatchEvent:'Star', ForkEvent:'Fork', IssuesEvent:'Issue', PullRequestEvent:'PR', ReleaseEvent:'Release' };
+        const type = typeMap[ev.type] || ev.type.replace('Event','');
+        allItems.push({
+          source: 'GitHub', title: `${type} — ${ev.repo?.name?.split('/')[1] || ev.repo?.name}`,
+          summary: ev.payload?.commits?.[0]?.message || '', link: `https://github.com/${ev.repo?.name}`,
+          time: timeAgo(ev.created_at), ts: new Date(ev.created_at).getTime(),
+        });
+      });
+    } catch(_){}
+  }
+
+  // RSS feeds
+  for (const src of activeSources.filter(s => s.type === 'rss')) {
+    try {
+      const d = await apiFetch(`/api/rss?url=${encodeURIComponent(src.url)}`);
+      (d.items || []).forEach(item => {
+        allItems.push({ source: src.label, title: item.title, summary: item.summary, link: item.link, time: item.pubDate ? timeAgo(item.pubDate) : '', ts: item.pubDate ? new Date(item.pubDate).getTime() : 0 });
+      });
+    } catch(_){}
+  }
+
+  allItems.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  badge = allItems.length;
+  const badgeEl = document.getElementById('notif-badge');
+  if (badgeEl && badge > 0) { badgeEl.style.display = ''; badgeEl.textContent = badge; }
+  renderFeed(allItems);
+}
+
+renderSources();
+loadAll();
+
+document.getElementById('refresh-all-btn').addEventListener('click', () => { toast('Refreshing...', 'info', 1200); loadAll(); });
+
+document.getElementById('add-source-btn').addEventListener('click', () => document.getElementById('add-source-modal').classList.add('open'));
+document.getElementById('close-source-modal').addEventListener('click', () => document.getElementById('add-source-modal').classList.remove('open'));
+document.getElementById('save-source-btn').addEventListener('click', () => {
+  const label = document.getElementById('rss-label').value.trim();
+  const url   = document.getElementById('rss-url').value.trim();
+  if (!label || !url) { toast('Fill in both fields', 'error'); return; }
+  activeSources.push({ id: Date.now().toString(), label, url, type:'rss', enabled:true });
+  saveSources(activeSources);
+  renderSources(); loadAll();
+  document.getElementById('rss-label').value = '';
+  document.getElementById('rss-url').value = '';
+  document.getElementById('add-source-modal').classList.remove('open');
+  toast('Feed added!', 'success');
+});
+</script>
+{% endblock %}
