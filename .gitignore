@@ -1,0 +1,54 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+.eggs/
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+.pythonlibs/
+
+# ── Build artifacts ───────────────────────────────────────────────────────────
+dist/
+build/
+*.so
+
+# ── JS / Node ─────────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Caches ────────────────────────────────────────────────────────────────────
+.cache/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.parcel-cache/
+
+# ── Replit internals ──────────────────────────────────────────────────────────
+.local/
+.agents/
+.upm/
+replit.nix
+
+# ── Secrets — never commit the live .env (use .env.example for templates) ────
+.env
+
+# ── OS / editor noise ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ── Project-generated archives ────────────────────────────────────────────────
+zipFile.zip
+omnios-hub.zip
+
+# NOTE: Everything else — hidden files (.env.example, .omnios* configs,
+#       all JSON configs), all module dirs, all backend/frontend files,
+#       static assets, templates, and system files — is intentionally
+#       included in every push via `git add -A`.

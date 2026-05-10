@@ -13,6 +13,67 @@ DEFAULTS = {
     "email":    "",
 }
 
+# Paths excluded from every push (kept in sync with .gitignore).
+# git add -A already respects .gitignore, but we write/refresh the file
+# here so the repo always has an authoritative .gitignore regardless of
+# whether the user committed one.
+_GITIGNORE_CONTENT = """\
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+.eggs/
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+.pythonlibs/
+
+# ── Build artifacts ───────────────────────────────────────────────────────────
+dist/
+build/
+*.so
+
+# ── JS / Node ─────────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Caches ────────────────────────────────────────────────────────────────────
+.cache/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.parcel-cache/
+
+# ── Replit internals ──────────────────────────────────────────────────────────
+.local/
+.agents/
+.upm/
+replit.nix
+
+# ── Secrets — never commit the live .env (use .env.example for templates) ────
+.env
+
+# ── OS / editor noise ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ── Project-generated archives ────────────────────────────────────────────────
+zipFile.zip
+omnios-hub.zip
+
+# NOTE: Everything else — hidden files (.env.example, .omnios* configs,
+#       all JSON configs), all module dirs, all backend/frontend files,
+#       static assets, templates, and system files — is intentionally
+#       included in every push via `git add -A`.
+"""
+
 
 # ── Config helpers ────────────────────────────────────────────────────────────
 
@@ -49,6 +110,14 @@ def _run(cmd: list[str], cwd: str, env: dict | None = None,
         return False, f"Command timed out after {timeout} s."
     except Exception as exc:
         return False, str(exc)
+
+
+# ── Ensure .gitignore is present and correct ──────────────────────────────────
+
+def _ensure_gitignore() -> None:
+    """Write (or refresh) the .gitignore so excluded paths are always honoured."""
+    gitignore_path = BASE_DIR / ".gitignore"
+    gitignore_path.write_text(_GITIGNORE_CONTENT)
 
 
 # ── Error classifier ──────────────────────────────────────────────────────────
@@ -116,7 +185,11 @@ def git_push() -> dict:
     cwd   = str(BASE_DIR)
     steps: list[str] = []
 
-    # ── 1. Init ────────────────────────────────────────────────────────────
+    # ── 1. Ensure .gitignore is authoritative ──────────────────────────────
+    _ensure_gitignore()
+    steps.append("✦ .gitignore refreshed — full OmniOS codebase will be staged.")
+
+    # ── 2. Init ────────────────────────────────────────────────────────────
     if not (BASE_DIR / ".git").exists():
         ok, out = _run(["git", "init"], cwd)
         steps.append(f"✦ git init: {out}")
@@ -125,12 +198,12 @@ def git_push() -> dict:
         # Set default branch to main for fresh repos
         _run(["git", "checkout", "-b", "main"], cwd)
 
-    # ── 2. Identity ────────────────────────────────────────────────────────
+    # ── 3. Identity ────────────────────────────────────────────────────────
     _run(["git", "config", "user.name",  cfg["username"]], cwd)
     _run(["git", "config", "user.email", cfg["email"]],    cwd)
     steps.append(f"✦ Identity: {cfg['username']} <{cfg['email']}>")
 
-    # ── 3. Remote ──────────────────────────────────────────────────────────
+    # ── 4. Remote ──────────────────────────────────────────────────────────
     ok, _ = _run(["git", "remote", "get-url", "origin"], cwd)
     if ok:
         _run(["git", "remote", "set-url", "origin", repo_url], cwd)
@@ -138,19 +211,18 @@ def git_push() -> dict:
         _run(["git", "remote", "add", "origin", repo_url], cwd)
     steps.append("✦ Remote configured.")
 
-    # ── 4. Determine branch ────────────────────────────────────────────────
+    # ── 5. Determine branch ────────────────────────────────────────────────
     _, branch = _run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd)
     branch = branch.strip() or "main"
 
-    # ── 5. Fetch remote refs ───────────────────────────────────────────────
+    # ── 6. Fetch remote refs ───────────────────────────────────────────────
     ok, fetch_out = _run(["git", "fetch", "--all", "--prune"], cwd, timeout=30)
     if ok:
-        steps.append(f"✦ git fetch: {fetch_out or 'up to date'}")
+        steps.append(f"✦ git fetch --all: {fetch_out or 'up to date'}")
     else:
-        # Fetch failure is non-fatal (fresh remote, no internet, etc.)
         steps.append(f"⚠ git fetch skipped: {fetch_out or 'could not reach remote'}")
 
-    # ── 6. Safe sync (only if remote branch exists) ────────────────────────
+    # ── 7. Safe sync (only if remote branch exists) ────────────────────────
     remote_ref = f"origin/{branch}"
     _, ref_check = _run(["git", "rev-parse", "--verify", remote_ref], cwd)
     remote_exists = bool(ref_check and not ref_check.startswith("fatal"))
@@ -163,30 +235,40 @@ def git_push() -> dict:
         else:
             # Diverged: reset our working tree onto the remote HEAD,
             # keeping all local changes staged (--soft)
-            steps.append(f"⚠ Fast-forward failed ({ff_out.splitlines()[0] if ff_out else 'diverged'}) — running safe reset.")
+            steps.append(
+                f"⚠ Fast-forward failed "
+                f"({ff_out.splitlines()[0] if ff_out else 'diverged'}) "
+                f"— running safe reset (--soft)."
+            )
             ok, reset_out = _run(["git", "reset", "--soft", remote_ref], cwd)
             if ok:
                 steps.append(f"✦ git reset --soft {remote_ref}: {reset_out or 'done'}")
             else:
                 steps.append(f"⚠ Reset warning: {reset_out}")
-                # Not fatal — we'll attempt the push anyway
 
-    # ── 7. Stage all ──────────────────────────────────────────────────────
-    ok, add_out = _run(["git", "add", "--all"], cwd)
-    steps.append(f"✦ git add: {add_out or 'staged all files'}")
+    # ── 8. Stage entire OmniOS codebase ───────────────────────────────────
+    # git add -A stages all tracked + untracked files (including hidden files
+    # like .env.example, .omnios* configs, all JSON, all module dirs, etc.)
+    # and respects .gitignore to exclude secrets and build artifacts.
+    ok, add_out = _run(["git", "add", "-A"], cwd)
+    steps.append(f"✦ git add -A (full codebase): {add_out or 'all files staged'}")
     if not ok:
         return {"success": False, "message": "\n".join(steps)}
 
-    # ── 8. Check for changes ───────────────────────────────────────────────
+    # ── 9. Check for changes ───────────────────────────────────────────────
     _, status_out = _run(["git", "status", "--porcelain"], cwd)
     if not status_out and remote_exists:
-        # Nothing staged and remote is already in sync
         steps.append("✦ Nothing new to commit — remote is already up to date.")
         return {"success": True, "message": "\n".join(steps)}
 
-    # ── 9. Commit ──────────────────────────────────────────────────────────
+    # Show a short summary of what's being committed
+    _, diff_stat = _run(["git", "diff", "--cached", "--stat"], cwd)
+    if diff_stat:
+        steps.append(f"✦ Staged changes:\n{diff_stat}")
+
+    # ── 10. Commit ─────────────────────────────────────────────────────────
     commit_msg = (
-        f"OmniOS auto-push — "
+        f"OmniOS full-codebase push — "
         f"{datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
     )
     ok, commit_out = _run(["git", "commit", "-m", commit_msg], cwd)
@@ -194,7 +276,7 @@ def git_push() -> dict:
     if not ok and "nothing to commit" not in commit_out.lower():
         return {"success": False, "message": "\n".join(steps)}
 
-    # ── 10. Push (force-with-lease first, fallback to --force) ─────────────
+    # ── 11. Push (force-with-lease first, fallback to --force) ─────────────
     # --force-with-lease only overwrites if the remote ref matches what we
     # fetched, making it safe against concurrent pushes.
     ok, push_out = _run(

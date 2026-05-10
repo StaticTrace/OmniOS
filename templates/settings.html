@@ -58,6 +58,25 @@
         </div>
       </div>
 
+      <!-- What gets pushed -->
+      <div style="background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:var(--radius);padding:0.75rem 1rem;font-size:0.75rem;color:var(--text-secondary);line-height:1.7;">
+        <div style="font-size:0.7rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.45rem;">What gets pushed</div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.3rem 0.75rem;">
+          <span>✦ All backend files <code style="font-family:var(--font-mono);font-size:0.68rem;background:var(--bg-card);padding:1px 4px;border-radius:3px;">app/</code></span>
+          <span>✦ All templates <code style="font-family:var(--font-mono);font-size:0.68rem;background:var(--bg-card);padding:1px 4px;border-radius:3px;">templates/</code></span>
+          <span>✦ Static assets <code style="font-family:var(--font-mono);font-size:0.68rem;background:var(--bg-card);padding:1px 4px;border-radius:3px;">static/</code></span>
+          <span>✦ Config files <code style="font-family:var(--font-mono);font-size:0.68rem;background:var(--bg-card);padding:1px 4px;border-radius:3px;">.omnios*</code> <code style="font-family:var(--font-mono);font-size:0.68rem;background:var(--bg-card);padding:1px 4px;border-radius:3px;">*.json</code></span>
+          <span>✦ Hidden files <code style="font-family:var(--font-mono);font-size:0.68rem;background:var(--bg-card);padding:1px 4px;border-radius:3px;">.env.example</code> etc.</span>
+          <span>✦ Root files <code style="font-family:var(--font-mono);font-size:0.68rem;background:var(--bg-card);padding:1px 4px;border-radius:3px;">main.py</code> <code style="font-family:var(--font-mono);font-size:0.68rem;background:var(--bg-card);padding:1px 4px;border-radius:3px;">wsgi.py</code> etc.</span>
+        </div>
+        <div style="margin-top:0.5rem;color:var(--text-muted);font-size:0.7rem;">
+          Excluded: <code style="font-family:var(--font-mono);font-size:0.68rem;">node_modules</code> · <code style="font-family:var(--font-mono);font-size:0.68rem;">__pycache__</code> · <code style="font-family:var(--font-mono);font-size:0.68rem;">.pythonlibs</code> · <code style="font-family:var(--font-mono);font-size:0.68rem;">dist/build</code> · <code style="font-family:var(--font-mono);font-size:0.68rem;">.env</code> (secrets) · <code style="font-family:var(--font-mono);font-size:0.68rem;">.local</code>
+        </div>
+        <div style="margin-top:0.4rem;color:var(--text-muted);font-size:0.7rem;">
+          Future modules and files are included automatically — no changes required.
+        </div>
+      </div>
+
       <div style="display:flex;gap:0.75rem;margin-top:0.25rem;flex-wrap:wrap;">
         <button class="btn btn-primary" id="save-git-btn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -65,7 +84,7 @@
         </button>
         <button class="btn btn-ghost" id="push-github-btn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
-          Push to GitHub
+          Push Full Codebase to GitHub
         </button>
       </div>
     </div>
