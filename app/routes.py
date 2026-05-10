@@ -4,6 +4,7 @@ from flask import Flask, jsonify, render_template, send_from_directory, request,
 from .config import IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
 from .git_manager import load_config as git_load, save_config as git_save, git_push
 from .data_registry import run_all_cleaners
+from . import config_manager as _cfg_mgr
 
 _DOTENV = Path(__file__).parent.parent / ".env"
 
@@ -251,6 +252,51 @@ def register_routes(app: Flask) -> None:
             as_attachment=True,
             download_name="omnios-hub.zip",
         )
+
+    # ── Config Editor page ────────────────────────────────────────────────────
+
+    @app.route("/config")
+    def config_editor():
+        return render_template("config.html", identity=IDENTITY, pages=PAGES)
+
+    # ── API: Config schema + active values ────────────────────────────────────
+
+    @app.route("/api/config")
+    def api_config_get():
+        return jsonify({
+            "schema": _cfg_mgr.get_schema(),
+            "active": _cfg_mgr.get_active(),
+        })
+
+    # ── API: Save config ──────────────────────────────────────────────────────
+
+    @app.route("/api/config", methods=["POST"])
+    def api_config_save():
+        payload = request.get_json(silent=True) or {}
+        data    = payload.get("data", {})
+        errors: list[str] = []
+        schema  = _cfg_mgr.get_schema()
+        for section in schema:
+            sid = section["id"]
+            if sid in data:
+                errs = _cfg_mgr.validate_section(sid, data[sid])
+                errors.extend(errs)
+        if errors:
+            return jsonify({"ok": False, "errors": errors}), 400
+        _cfg_mgr.save_all(data)
+        # Refresh the module-level names used by template routes
+        global IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
+        from .config import IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
+        return jsonify({"ok": True})
+
+    # ── API: Reset config to defaults ─────────────────────────────────────────
+
+    @app.route("/api/config/reset", methods=["POST"])
+    def api_config_reset():
+        _cfg_mgr.reset()
+        global IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
+        from .config import IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
+        return jsonify({"ok": True})
 
     # ── Favicon ───────────────────────────────────────────────────────────────
 

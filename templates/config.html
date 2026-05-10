@@ -1,0 +1,500 @@
+{% extends "base.html" %}
+{% block title %}Config Editor — OmniOS{% endblock %}
+
+{% block extra_css %}
+<style>
+.cfg-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+  max-width: 960px;
+  margin: 0 auto;
+}
+@media (max-width: 720px) {
+  .cfg-layout { grid-template-columns: 1fr; }
+  .cfg-sidebar { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+}
+.cfg-sidebar { position: sticky; top: 1rem; }
+.cfg-tab {
+  display: flex; align-items: center; gap: 0.6rem;
+  width: 100%; padding: 0.55rem 0.85rem;
+  border-radius: var(--radius-sm); font-size: 0.82rem;
+  color: var(--text-secondary); font-weight: 500;
+  background: none; border: none; cursor: pointer;
+  transition: all var(--transition); text-align: left;
+}
+.cfg-tab:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.cfg-tab.active {
+  background: var(--accent-glow);
+  color: var(--accent-text);
+  border-left: 2px solid var(--accent);
+  padding-left: calc(0.85rem - 2px);
+}
+.cfg-tab svg { flex-shrink: 0; opacity: 0.7; }
+.cfg-tab.active svg { opacity: 1; }
+.cfg-section { display: none; flex-direction: column; gap: 1.25rem; }
+.cfg-section.active { display: flex; }
+.field-row { display: flex; flex-direction: column; gap: 0.3rem; }
+.field-label {
+  font-size: 0.75rem; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.field-desc { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.15rem; line-height: 1.5; }
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.65rem 0.85rem;
+  background: var(--bg-elevated); border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+}
+.toggle-info { display: flex; flex-direction: column; gap: 0.1rem; }
+.toggle-info .tl { font-size: 0.82rem; font-weight: 500; color: var(--text-primary); }
+.toggle-info .td { font-size: 0.72rem; color: var(--text-muted); }
+.toggle-switch {
+  position: relative; width: 36px; height: 20px; flex-shrink: 0;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; inset: 0;
+  background: var(--border); border-radius: 99px;
+  cursor: pointer; transition: background var(--transition);
+}
+.toggle-track::after {
+  content: ''; position: absolute; width: 14px; height: 14px;
+  left: 3px; top: 3px; background: white; border-radius: 50%;
+  transition: transform var(--transition);
+}
+.toggle-switch input:checked + .toggle-track { background: var(--accent); }
+.toggle-switch input:checked + .toggle-track::after { transform: translateX(16px); }
+
+/* Social links list */
+.social-link-row {
+  display: grid; grid-template-columns: 1fr 2fr auto;
+  gap: 0.5rem; align-items: center;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg-elevated); border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+}
+.remove-link-btn {
+  width: 28px; height: 28px; flex-shrink: 0; display: flex;
+  align-items: center; justify-content: center;
+  border-radius: var(--radius-sm); color: var(--text-muted);
+  background: none; border: none; cursor: pointer;
+  transition: all var(--transition);
+}
+.remove-link-btn:hover { background: rgba(239,68,68,0.12); color: #f87171; }
+
+/* Save bar */
+.save-bar {
+  position: sticky; top: 0; z-index: 80;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.75rem; padding: 0.65rem 1rem;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-soft);
+  margin: -1.5rem -1.5rem 1.5rem;
+}
+.save-bar .dirty-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--warning); display: none; flex-shrink: 0;
+}
+.save-bar.dirty .dirty-dot { display: block; }
+.save-bar .save-label {
+  font-size: 0.78rem; color: var(--text-muted); flex: 1;
+}
+.save-bar.dirty .save-label { color: var(--warning); }
+</style>
+{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div>
+    <div class="topbar-title">Config Editor</div>
+    <div class="topbar-subtitle">View, edit and save all OmniOS configuration values</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="cfg-layout">
+
+  <!-- ── Left tab list ────────────────────────────────────────────────────── -->
+  <nav class="cfg-sidebar" id="cfg-tab-list">
+    <!-- populated by JS -->
+  </nav>
+
+  <!-- ── Right editor area ─────────────────────────────────────────────────  -->
+  <div id="cfg-editor">
+
+    <!-- Save bar -->
+    <div class="save-bar" id="save-bar">
+      <div class="dirty-dot"></div>
+      <span class="save-label" id="save-label">All changes saved</span>
+      <div style="display:flex;gap:0.5rem;">
+        <button class="btn btn-ghost" id="reset-btn" style="font-size:0.78rem;padding:0.4rem 0.85rem;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+          Reset to Defaults
+        </button>
+        <button class="btn btn-primary" id="save-all-btn" style="font-size:0.78rem;padding:0.4rem 0.85rem;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save Changes
+        </button>
+      </div>
+    </div>
+
+    <!-- Section panels — populated by JS -->
+    <div id="cfg-sections"></div>
+
+  </div>
+</div>
+
+<!-- ── Reset Confirmation Modal ──────────────────────────────────────────────── -->
+<div id="reset-modal-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:calc(var(--radius)*1.5);padding:2rem;max-width:420px;width:92%;box-shadow:0 24px 64px rgba(0,0,0,0.5);">
+    <div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:0.85rem;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span style="font-size:1rem;font-weight:700;color:var(--text-primary);">Reset to Defaults?</span>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1.25rem;">
+      This will discard all your saved configuration overrides and restore the built-in defaults. Your data (aliases, projects, notes, etc.) is <strong style="color:var(--text-primary);">not</strong> affected.
+    </p>
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+      <button class="btn btn-ghost" id="cancel-reset-btn">Cancel</button>
+      <button class="btn" id="confirm-reset-btn" style="background:var(--warning);color:#000;border-color:var(--warning);font-weight:600;">
+        Reset All Config
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+import { apiFetch, toast } from '/static/js/core/os.js';
+
+// ── SVG icon map ───────────────────────────────────────────────────────────
+const ICONS = {
+  'user':     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+  'share-2':  `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`,
+  'bell':     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
+  'sliders':  `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>`,
+  'layout':   `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>`,
+  'settings': `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+};
+
+// ── State ──────────────────────────────────────────────────────────────────
+let _schema   = [];   // [{id, label, description, icon, fields, defaults}]
+let _active   = {};   // current saved values from server
+let _draft    = {};   // in-memory working copy
+let _dirty    = false;
+let _activeTab = null;
+
+// ── DOM refs ───────────────────────────────────────────────────────────────
+const tabList    = document.getElementById('cfg-tab-list');
+const sectionsEl = document.getElementById('cfg-sections');
+const saveBar    = document.getElementById('save-bar');
+const saveLabel  = document.getElementById('save-label');
+const saveAllBtn = document.getElementById('save-all-btn');
+const resetBtn   = document.getElementById('reset-btn');
+const resetOverlay   = document.getElementById('reset-modal-overlay');
+const cancelResetBtn = document.getElementById('cancel-reset-btn');
+const confirmResetBtn= document.getElementById('confirm-reset-btn');
+
+// ── Deep clone ─────────────────────────────────────────────────────────────
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+// ── Mark dirty ─────────────────────────────────────────────────────────────
+function markDirty() {
+  if (_dirty) return;
+  _dirty = true;
+  saveBar.classList.add('dirty');
+  saveLabel.textContent = 'Unsaved changes';
+}
+function markClean() {
+  _dirty = false;
+  saveBar.classList.remove('dirty');
+  saveLabel.textContent = 'All changes saved';
+}
+
+// ── Field value getters/setters from draft ─────────────────────────────────
+function getDraftVal(sectionId, key) {
+  return (_draft[sectionId] ?? {})[key];
+}
+function setDraftVal(sectionId, key, value) {
+  if (!_draft[sectionId]) _draft[sectionId] = {};
+  _draft[sectionId][key] = value;
+  markDirty();
+}
+
+// ── Build field HTML ───────────────────────────────────────────────────────
+function buildField(sectionId, field, value) {
+  const { key, label, type, placeholder, description } = field;
+  const id = `cfg-${sectionId}-${key}`;
+  let input = '';
+
+  if (type === 'toggle') {
+    return `
+      <div class="toggle-row" data-section="${sectionId}" data-key="${key}">
+        <div class="toggle-info">
+          <span class="tl">${label}</span>
+          ${description ? `<span class="td">${description}</span>` : ''}
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="${id}" ${value ? 'checked' : ''} />
+          <span class="toggle-track"></span>
+        </label>
+      </div>`;
+  }
+
+  if (type === 'textarea') {
+    input = `<textarea id="${id}" rows="4" placeholder="${placeholder || ''}" style="resize:vertical;">${value ?? ''}</textarea>`;
+  } else {
+    const itype = type === 'url' ? 'url' : type === 'email' ? 'email' : type === 'number' ? 'text' : 'text';
+    input = `<input type="${itype}" id="${id}" value="${escHtml(String(value ?? ''))}" placeholder="${placeholder || ''}" />`;
+  }
+
+  return `
+    <div class="field-row" data-section="${sectionId}" data-key="${key}">
+      <label class="field-label" for="${id}">${label}</label>
+      ${input}
+      ${description ? `<div class="field-desc">${description}</div>` : ''}
+    </div>`;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Social links section (special dynamic list) ────────────────────────────
+function buildSocialLinksSection(sectionId, sectionDef, sectionValues) {
+  const links = (sectionValues.links || []).map(clone);
+  return `
+    <div class="card">
+      <div class="card-header" style="margin-bottom:1rem;">
+        <div class="card-title" style="font-size:0.95rem;">
+          ${ICONS[sectionDef.icon] || ''} ${sectionDef.label}
+        </div>
+        <div style="font-size:0.78rem;color:var(--text-muted);">${sectionDef.description}</div>
+      </div>
+      <div id="social-links-list" style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:0.75rem;">
+        ${links.map((l, i) => renderSocialRow(l, i)).join('')}
+      </div>
+      <button class="btn btn-ghost" id="add-social-btn" style="font-size:0.78rem;width:100%;justify-content:center;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Social Link
+      </button>
+    </div>`;
+}
+
+function renderSocialRow(link, i) {
+  return `
+    <div class="social-link-row" data-social-idx="${i}">
+      <input type="text"  class="social-platform" value="${escHtml(link.platform || '')}" placeholder="GitHub" style="font-size:0.8rem;padding:0.4rem 0.6rem;" />
+      <input type="url"   class="social-url"      value="${escHtml(link.url || '')}"      placeholder="https://…"   style="font-size:0.8rem;padding:0.4rem 0.6rem;" />
+      <button class="remove-link-btn" data-social-idx="${i}" title="Remove">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>`;
+}
+
+function refreshSocialList() {
+  const links = (_draft['social_links']?.links || []);
+  document.getElementById('social-links-list').innerHTML =
+    links.map((l, i) => renderSocialRow(l, i)).join('');
+  bindSocialEvents();
+}
+
+function bindSocialEvents() {
+  document.querySelectorAll('.social-link-row').forEach(row => {
+    const idx = parseInt(row.dataset.socialIdx);
+    row.querySelector('.social-platform').addEventListener('input', e => {
+      _draft['social_links'].links[idx].platform = e.target.value;
+      markDirty();
+    });
+    row.querySelector('.social-url').addEventListener('input', e => {
+      _draft['social_links'].links[idx].url = e.target.value;
+      _draft['social_links'].links[idx].icon = deriveIcon(e.target.value);
+      markDirty();
+    });
+    row.querySelector('.remove-link-btn').addEventListener('click', () => {
+      _draft['social_links'].links.splice(idx, 1);
+      markDirty();
+      refreshSocialList();
+    });
+  });
+
+  const addBtn = document.getElementById('add-social-btn');
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      if (!_draft['social_links']) _draft['social_links'] = { links: [] };
+      _draft['social_links'].links.push({ platform: '', url: '', icon: 'link' });
+      markDirty();
+      refreshSocialList();
+    });
+  }
+}
+
+function deriveIcon(url) {
+  const u = url.toLowerCase();
+  if (u.includes('github'))    return 'github';
+  if (u.includes('youtube'))   return 'youtube';
+  if (u.includes('twitter') || u.includes('x.com')) return 'twitter';
+  if (u.includes('linkedin'))  return 'linkedin';
+  if (u.includes('instagram')) return 'instagram';
+  if (u.includes('twitch'))    return 'twitch';
+  return 'link';
+}
+
+// ── Build a regular section card ───────────────────────────────────────────
+function buildSection(sectionDef, sectionValues) {
+  const sid = sectionDef.id;
+
+  if (sid === 'social_links') {
+    return buildSocialLinksSection(sid, sectionDef, sectionValues);
+  }
+
+  const fieldsHtml = sectionDef.fields.map(f => {
+    const val = getDraftVal(sid, f.key) ?? sectionValues[f.key] ?? f.default;
+    return buildField(sid, f, val);
+  }).join('');
+
+  return `
+    <div class="card">
+      <div class="card-header" style="margin-bottom:1.1rem;">
+        <div>
+          <div class="card-title" style="font-size:0.95rem;display:flex;align-items:center;gap:0.5rem;">
+            ${ICONS[sectionDef.icon] || ''} ${sectionDef.label}
+          </div>
+          <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem;">${sectionDef.description}</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.85rem;">
+        ${fieldsHtml}
+      </div>
+    </div>`;
+}
+
+// ── Render all tabs and sections ───────────────────────────────────────────
+function render() {
+  // Tabs
+  tabList.innerHTML = _schema.map(s => `
+    <button class="cfg-tab ${_activeTab === s.id ? 'active' : ''}" data-tab="${s.id}">
+      ${ICONS[s.icon] || ICONS['settings']}
+      ${s.label}
+    </button>`).join('');
+
+  // Section panels
+  sectionsEl.innerHTML = _schema.map(s => {
+    const sectionValues = _active[s.id] || {};
+    return `<div class="cfg-section ${_activeTab === s.id ? 'active' : ''}" id="cfg-sec-${s.id}">
+      ${buildSection(s, sectionValues)}
+    </div>`;
+  }).join('');
+
+  // Bind tab clicks
+  tabList.querySelectorAll('.cfg-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _activeTab = btn.dataset.tab;
+      tabList.querySelectorAll('.cfg-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      sectionsEl.querySelectorAll('.cfg-section').forEach(s => s.classList.remove('active'));
+      document.getElementById(`cfg-sec-${_activeTab}`)?.classList.add('active');
+    });
+  });
+
+  // Bind field inputs
+  sectionsEl.querySelectorAll('[data-section][data-key]').forEach(row => {
+    const sid = row.dataset.section;
+    const key = row.dataset.key;
+    const inp = row.querySelector('input, textarea, select');
+    if (!inp) return;
+    if (inp.type === 'checkbox') {
+      inp.addEventListener('change', () => { setDraftVal(sid, key, inp.checked); });
+    } else {
+      inp.addEventListener('input', () => { setDraftVal(sid, key, inp.value); });
+    }
+  });
+
+  // Bind social links events
+  if (_activeTab === 'social_links') bindSocialEvents();
+}
+
+// ── Switch tabs and re-bind ─────────────────────────────────────────────────
+function switchTab(tabId) {
+  _activeTab = tabId;
+  render();
+}
+
+// ── Load config from server ────────────────────────────────────────────────
+async function loadConfig() {
+  try {
+    const d = await apiFetch('/api/config');
+    _schema    = d.schema;
+    _active    = d.active;
+    _draft     = clone(_active);
+    _activeTab = _activeTab || (_schema[0]?.id ?? null);
+    render();
+    markClean();
+  } catch(e) {
+    toast('Failed to load config: ' + e.message, 'error');
+  }
+}
+
+// ── Save all ───────────────────────────────────────────────────────────────
+saveAllBtn.addEventListener('click', async () => {
+  saveAllBtn.disabled = true;
+  saveAllBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 0.8s linear infinite"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Saving…`;
+  try {
+    const d = await apiFetch('/api/config', {
+      method: 'POST',
+      body: JSON.stringify({ data: _draft }),
+    });
+    if (d.ok) {
+      _active = clone(_draft);
+      markClean();
+      toast('Config saved and applied!', 'success');
+      // Re-render to reflect any server-side normalisations
+      await loadConfig();
+    } else {
+      toast(d.errors?.join(' ') || 'Save failed', 'error');
+    }
+  } catch(e) {
+    toast('Save failed: ' + e.message, 'error');
+  } finally {
+    saveAllBtn.disabled = false;
+    saveAllBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Changes`;
+  }
+});
+
+// ── Reset ──────────────────────────────────────────────────────────────────
+resetBtn.addEventListener('click', () => {
+  resetOverlay.style.display = 'flex';
+});
+cancelResetBtn.addEventListener('click', () => {
+  resetOverlay.style.display = 'none';
+});
+resetOverlay.addEventListener('click', e => {
+  if (e.target === resetOverlay) resetOverlay.style.display = 'none';
+});
+confirmResetBtn.addEventListener('click', async () => {
+  resetOverlay.style.display = 'none';
+  confirmResetBtn.disabled = true;
+  try {
+    const d = await apiFetch('/api/config/reset', { method: 'POST' });
+    if (d.ok) {
+      toast('Config reset to defaults!', 'success');
+      await loadConfig();
+    } else {
+      toast('Reset failed', 'error');
+    }
+  } catch(e) {
+    toast('Reset failed: ' + e.message, 'error');
+  } finally {
+    confirmResetBtn.disabled = false;
+  }
+});
+
+// ── Init ───────────────────────────────────────────────────────────────────
+loadConfig();
+</script>
+<style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+{% endblock %}
