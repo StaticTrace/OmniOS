@@ -34,7 +34,7 @@
 
     <div class="card">
       <div style="font-size:0.72rem;color:var(--text-muted);line-height:1.6;">
-        Add any RSS feed URL to aggregate content. GitHub and YouTube activity is loaded automatically from your connected profiles.
+        Add any RSS feed URL to aggregate content. GitHub activity is loaded automatically from your configured profile.
       </div>
     </div>
   </div>
@@ -42,7 +42,7 @@
   <!-- Feed -->
   <div style="display:flex;flex-direction:column;gap:0.75rem;">
     <div id="notif-feed" style="display:flex;flex-direction:column;gap:0.75rem;">
-      <div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:2rem;">Loading notifications...</div>
+      <div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:2rem;">Loading notifications…</div>
     </div>
   </div>
 
@@ -53,7 +53,9 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title">Add RSS Feed</div>
-      <button class="btn-icon" id="close-source-modal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      <button class="btn-icon" id="close-source-modal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
     <div style="display:flex;flex-direction:column;gap:0.75rem;">
       <input type="text" id="rss-label" placeholder="Source name (e.g. Hacker News)" />
@@ -63,6 +65,24 @@
     </div>
   </div>
 </div>
+
+<!-- Edit RSS Modal -->
+<div class="modal-backdrop" id="edit-source-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit RSS Feed</div>
+      <button class="btn-icon" id="close-edit-source-modal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+      <input type="text" id="edit-rss-label" placeholder="Source name" />
+      <input type="url"  id="edit-rss-url"   placeholder="Feed URL" />
+      <button class="btn btn-primary" id="update-source-btn">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -70,35 +90,65 @@
 import { apiFetch, timeAgo, toast } from '/static/js/core/os.js';
 
 const RSS_KEY = 'omnios-rss-sources';
-const defaultSources = [
-  { id:'github', label:'GitHub', type:'github', enabled:true },
-];
+
+const SVG_PENCIL = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+const SVG_TRASH  = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+
+function buildDefaultSources(username) {
+  return [{ id:'github', label:`GitHub (${username})`, type:'github', enabled:true, username }];
+}
 
 function loadSources() {
-  try { return JSON.parse(localStorage.getItem(RSS_KEY)) || defaultSources; }
-  catch { return defaultSources; }
+  try { return JSON.parse(localStorage.getItem(RSS_KEY)) || null; }
+  catch { return null; }
 }
 function saveSources(s) { localStorage.setItem(RSS_KEY, JSON.stringify(s)); }
 
-let activeSources = loadSources();
+let activeSources = [];
 let allItems = [];
 let badge = 0;
+let _editingSourceIndex = -1;
+let _ghUsername = 'StaticTrace';
+
+// ── Load GitHub username from config ──────────────────────────────────────
+async function loadUsername() {
+  try {
+    const cfg = await apiFetch('/api/config');
+    _ghUsername = cfg.active?.ui?.github_username || 'StaticTrace';
+  } catch(_) {}
+}
 
 function renderSources() {
   const el = document.getElementById('sources-list');
   el.innerHTML = '';
   activeSources.forEach((src, i) => {
     const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-radius:var(--radius-sm);cursor:pointer;transition:background 0.15s;';
+    row.style.cssText = 'display:flex;align-items:center;gap:0.4rem;padding:0.4rem 0.5rem;border-radius:var(--radius-sm);transition:background 0.15s;';
     row.onmouseenter = () => row.style.background = 'var(--bg-hover)';
     row.onmouseleave = () => row.style.background = '';
     const dot = src.enabled ? 'var(--success)' : 'var(--text-muted)';
-    row.innerHTML = `<div style="width:6px;height:6px;border-radius:50%;background:${dot};flex-shrink:0;"></div>
-      <span style="flex:1;font-size:0.8rem;color:var(--text-secondary);">${src.label}</span>
-      ${src.type !== 'github' ? `<button class="btn-icon del-src" data-i="${i}" style="padding:0.2rem;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>` : ''}`;
+
+    const isEditable = src.type !== 'github';
+    row.innerHTML = `
+      <div style="width:6px;height:6px;border-radius:50%;background:${dot};flex-shrink:0;"></div>
+      <span style="flex:1;font-size:0.8rem;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${src.label}</span>
+      ${isEditable ? `
+        <button class="btn-icon edit-src" data-i="${i}" title="Edit" style="padding:0.2rem;color:var(--text-muted);">${SVG_PENCIL}</button>
+        <button class="btn-icon del-src"  data-i="${i}" title="Remove" style="padding:0.2rem;color:var(--text-muted);">${SVG_TRASH}</button>
+      ` : `<span style="font-size:0.65rem;color:var(--text-muted);padding:1px 5px;background:var(--bg-elevated);border-radius:3px;">built-in</span>`}`;
     el.appendChild(row);
   });
-  el.querySelectorAll('.del-src').forEach(btn => btn.addEventListener('click', (e) => {
+
+  el.querySelectorAll('.edit-src').forEach(btn => btn.addEventListener('click', e => {
+    e.stopPropagation();
+    _editingSourceIndex = +btn.dataset.i;
+    const src = activeSources[_editingSourceIndex];
+    document.getElementById('edit-rss-label').value = src.label;
+    document.getElementById('edit-rss-url').value   = src.url || '';
+    document.getElementById('edit-source-modal').classList.add('open');
+  }));
+
+  el.querySelectorAll('.del-src').forEach(btn => btn.addEventListener('click', e => {
     e.stopPropagation();
     activeSources.splice(+btn.dataset.i, 1);
     saveSources(activeSources);
@@ -108,53 +158,58 @@ function renderSources() {
 
 function renderFeed(items) {
   const feed = document.getElementById('notif-feed');
-  if (!items.length) { feed.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:2rem;">No items yet. Add a source or check back later.</div>'; return; }
+  if (!items.length) {
+    feed.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:2rem;">No items yet. Add a source or check back later.</div>';
+    return;
+  }
   feed.innerHTML = '';
   items.forEach(item => {
     const card = document.createElement('div');
     card.className = 'card';
     card.style.cssText = 'padding:1rem;display:flex;flex-direction:column;gap:0.35rem;';
-    card.innerHTML = `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.1rem;">
+    card.innerHTML = `
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.1rem;">
         <span class="tag" style="font-size:0.62rem;">${item.source}</span>
         <span style="font-size:0.7rem;color:var(--text-muted);margin-left:auto;">${item.time || ''}</span>
       </div>
       <div style="font-size:0.875rem;font-weight:600;color:var(--text-primary);">${item.title}</div>
       ${item.summary ? `<div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${item.summary}</div>` : ''}
-      ${item.link ? `<a href="${item.link}" target="_blank" rel="noopener" style="font-size:0.72rem;color:var(--accent-text);margin-top:0.1rem;">Read more ↗</a>` : ''}`;
+      ${item.link   ? `<a href="${item.link}" target="_blank" rel="noopener" style="font-size:0.72rem;color:var(--accent-text);margin-top:0.1rem;">Read more ↗</a>` : ''}`;
     feed.appendChild(card);
   });
 }
 
 async function loadAll() {
   allItems = [];
-  const feed = document.getElementById('notif-feed');
-  feed.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:2rem;">Loading...</div>';
+  document.getElementById('notif-feed').innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:2rem;">Loading…</div>';
 
-  // GitHub events
   const ghSrc = activeSources.find(s => s.type === 'github');
   if (ghSrc) {
+    const uname = ghSrc.username || _ghUsername;
     try {
-      const d = await apiFetch('/api/github/StaticTrace');
+      const d = await apiFetch(`/api/github/${uname}`);
       (d.events || []).slice(0,8).forEach(ev => {
         const typeMap = { PushEvent:'Push', CreateEvent:'Create', WatchEvent:'Star', ForkEvent:'Fork', IssuesEvent:'Issue', PullRequestEvent:'PR', ReleaseEvent:'Release' };
         const type = typeMap[ev.type] || ev.type.replace('Event','');
         allItems.push({
-          source: 'GitHub', title: `${type} — ${ev.repo?.name?.split('/')[1] || ev.repo?.name}`,
-          summary: ev.payload?.commits?.[0]?.message || '', link: `https://github.com/${ev.repo?.name}`,
-          time: timeAgo(ev.created_at), ts: new Date(ev.created_at).getTime(),
+          source: 'GitHub',
+          title: `${type} — ${ev.repo?.name?.split('/')[1] || ev.repo?.name}`,
+          summary: ev.payload?.commits?.[0]?.message || '',
+          link: `https://github.com/${ev.repo?.name}`,
+          time: timeAgo(ev.created_at),
+          ts: new Date(ev.created_at).getTime(),
         });
       });
-    } catch(_){}
+    } catch(_) {}
   }
 
-  // RSS feeds
   for (const src of activeSources.filter(s => s.type === 'rss')) {
     try {
       const d = await apiFetch(`/api/rss?url=${encodeURIComponent(src.url)}`);
       (d.items || []).forEach(item => {
         allItems.push({ source: src.label, title: item.title, summary: item.summary, link: item.link, time: item.pubDate ? timeAgo(item.pubDate) : '', ts: item.pubDate ? new Date(item.pubDate).getTime() : 0 });
       });
-    } catch(_){}
+    } catch(_) {}
   }
 
   allItems.sort((a, b) => (b.ts || 0) - (a.ts || 0));
@@ -164,13 +219,13 @@ async function loadAll() {
   renderFeed(allItems);
 }
 
-renderSources();
-loadAll();
-
-document.getElementById('refresh-all-btn').addEventListener('click', () => { toast('Refreshing...', 'info', 1200); loadAll(); });
-
+// ── Modal events ──────────────────────────────────────────────────────────
 document.getElementById('add-source-btn').addEventListener('click', () => document.getElementById('add-source-modal').classList.add('open'));
 document.getElementById('close-source-modal').addEventListener('click', () => document.getElementById('add-source-modal').classList.remove('open'));
+document.getElementById('close-edit-source-modal').addEventListener('click', () => document.getElementById('edit-source-modal').classList.remove('open'));
+document.getElementById('add-source-modal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
+document.getElementById('edit-source-modal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
+
 document.getElementById('save-source-btn').addEventListener('click', () => {
   const label = document.getElementById('rss-label').value.trim();
   const url   = document.getElementById('rss-url').value.trim();
@@ -179,9 +234,34 @@ document.getElementById('save-source-btn').addEventListener('click', () => {
   saveSources(activeSources);
   renderSources(); loadAll();
   document.getElementById('rss-label').value = '';
-  document.getElementById('rss-url').value = '';
+  document.getElementById('rss-url').value   = '';
   document.getElementById('add-source-modal').classList.remove('open');
   toast('Feed added!', 'success');
 });
+
+document.getElementById('update-source-btn').addEventListener('click', () => {
+  const label = document.getElementById('edit-rss-label').value.trim();
+  const url   = document.getElementById('edit-rss-url').value.trim();
+  if (!label || !url) { toast('Fill in both fields', 'error'); return; }
+  activeSources[_editingSourceIndex] = { ...activeSources[_editingSourceIndex], label, url };
+  saveSources(activeSources);
+  renderSources(); loadAll();
+  document.getElementById('edit-source-modal').classList.remove('open');
+  toast('Feed updated!', 'success');
+});
+
+document.getElementById('refresh-all-btn').addEventListener('click', () => { toast('Refreshing…', 'info', 1200); loadAll(); });
+
+// ── Init ──────────────────────────────────────────────────────────────────
+async function init() {
+  await loadUsername();
+  const stored = loadSources();
+  activeSources = stored || buildDefaultSources(_ghUsername);
+  if (!stored) saveSources(activeSources);
+  renderSources();
+  loadAll();
+}
+
+init();
 </script>
 {% endblock %}

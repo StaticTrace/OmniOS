@@ -1,0 +1,27 @@
+{
+  "identity": {
+    "name": "OmniOS Hub",
+    "tagline": "Your personal OS for the web",
+    "bio": "A private, modular digital operating system built around you — unified profile, dashboard, social hub, notifications, and extensible modules so you can add or remove features as your needs evolve. Clean, minimal UI and a developer-friendly architecture for fast customization.",
+    "avatar": ""
+  },
+  "notifications": {
+    "github_enabled": true,
+    "youtube_enabled": true,
+    "rss_enabled": false
+  },
+  "ui": {
+    "github_username": "StaticTrace",
+    "weather_lat": "51.5074",
+    "weather_lon": "-0.1278",
+    "sidebar_label": "Personal OS"
+  },
+  "pages": {
+    "show_dashboard": true,
+    "show_social": true,
+    "show_notifications": true,
+    "show_email_alias": true,
+    "show_portfolio": true,
+    "show_contact": true
+  }
+}

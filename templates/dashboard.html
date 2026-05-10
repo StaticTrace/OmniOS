@@ -56,10 +56,16 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
           GitHub Activity
         </div>
-        <a href="https://github.com/StaticTrace" target="_blank" class="btn btn-ghost" style="font-size:0.75rem;padding:0.3rem 0.6rem;">View Profile ↗</a>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <span id="gh-username-label" style="font-size:0.72rem;color:var(--text-muted);font-family:var(--font-mono);"></span>
+          <a id="gh-profile-link" href="#" target="_blank" class="btn btn-ghost" style="font-size:0.75rem;padding:0.3rem 0.6rem;">View Profile ↗</a>
+          <a href="/config" title="Change GitHub username in Config Editor" class="btn-icon" style="color:var(--text-muted);" title="Edit username">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </a>
+        </div>
       </div>
       <div id="gh-activity" style="display:flex;flex-direction:column;gap:0.5rem;">
-        <div style="color:var(--text-muted);font-size:0.8rem;">Loading activity...</div>
+        <div style="color:var(--text-muted);font-size:0.8rem;">Loading activity…</div>
       </div>
     </div>
 
@@ -72,7 +78,7 @@
         </div>
       </div>
       <div id="gh-langs" style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-        <div style="color:var(--text-muted);font-size:0.8rem;">Loading...</div>
+        <div style="color:var(--text-muted);font-size:0.8rem;">Loading…</div>
       </div>
     </div>
 
@@ -116,12 +122,14 @@
   </div>
 </div>
 
-<!-- Add Link Modal -->
+<!-- Add/Edit Link Modal -->
 <div class="modal-backdrop" id="add-link-modal">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">Add Quick Link</div>
-      <button class="btn-icon" id="close-link-modal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      <div class="modal-title" id="link-modal-title">Add Quick Link</div>
+      <button class="btn-icon" id="close-link-modal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
     <div style="display:flex;flex-direction:column;gap:0.75rem;">
       <input type="text" id="link-label" placeholder="Label (e.g. My Site)" />
@@ -130,6 +138,7 @@
     </div>
   </div>
 </div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -137,97 +146,20 @@
 import { apiFetch, timeAgo, toast, copyToClipboard } from '/static/js/core/os.js';
 
 // Clock
-const clockEl = document.getElementById('widget-clock');
-const dateEl  = document.getElementById('widget-date');
+const clockEl  = document.getElementById('widget-clock');
+const dateEl   = document.getElementById('widget-date');
 const dashClock = document.getElementById('dash-clock');
 function tick() {
   const now = new Date();
-  clockEl.textContent  = now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
-  dateEl.textContent   = now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  clockEl.textContent   = now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
+  dateEl.textContent    = now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
   dashClock.textContent = now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
 }
 tick(); setInterval(tick, 1000);
 
-// GitHub stats
-apiFetch('/api/github-stats/StaticTrace').then(d => {
-  if (d.error) return;
-  document.getElementById('gh-repos').textContent     = d.repos ?? '—';
-  document.getElementById('gh-followers').textContent = d.followers ?? '—';
-  document.getElementById('gh-stars').textContent     = `${d.stars ?? 0} stars total`;
-  const langsEl = document.getElementById('gh-langs');
-  langsEl.innerHTML = '';
-  const colors = ['#7c6af7','#a78bfa','#60a5fa','#34d399','#fbbf24'];
-  if (d.top_langs && d.top_langs.length) {
-    d.top_langs.forEach(([lang, count], i) => {
-      const pill = document.createElement('span');
-      pill.className = 'tag';
-      pill.style.background = `${colors[i % colors.length]}22`;
-      pill.style.color = colors[i % colors.length];
-      pill.style.border = `1px solid ${colors[i % colors.length]}44`;
-      pill.textContent = lang;
-      langsEl.appendChild(pill);
-    });
-  } else {
-    langsEl.innerHTML = '<span style="color:var(--text-muted);font-size:0.8rem;">No public repos yet</span>';
-  }
-}).catch(() => {});
-
-// GitHub activity
-apiFetch('/api/github/StaticTrace').then(d => {
-  const el = document.getElementById('gh-activity');
-  if (!d.events || !d.events.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;">No recent activity found.</div>'; return; }
-  el.innerHTML = '';
-  d.events.slice(0,8).forEach(ev => {
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:flex-start;gap:0.6rem;padding:0.5rem 0;border-bottom:1px solid var(--border-soft);font-size:0.8rem;';
-    const typeMap = { PushEvent:'Push', CreateEvent:'Create', WatchEvent:'Star', ForkEvent:'Fork', IssuesEvent:'Issue', PullRequestEvent:'PR', DeleteEvent:'Delete', ReleaseEvent:'Release' };
-    const type = typeMap[ev.type] || ev.type.replace('Event','');
-    const repo = ev.repo?.name?.split('/')[1] || ev.repo?.name || '—';
-    row.innerHTML = `<span class="tag" style="flex-shrink:0;font-size:0.65rem;">${type}</span>
-      <div style="flex:1;min-width:0;"><div style="color:var(--text-primary);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${repo}</div>
-      <div style="color:var(--text-muted);font-size:0.72rem;">${timeAgo(ev.created_at)}</div></div>`;
-    el.appendChild(row);
-  });
-}).catch(() => { document.getElementById('gh-activity').innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;">Could not load activity.</div>'; });
-
-// Quick Links
-const LINKS_KEY = 'omnios-quick-links';
-const defaultLinks = [
-  { label:'GitHub', url:'https://github.com/StaticTrace' },
-  { label:'YouTube', url:'https://www.youtube.com/@wtfugdelittlepony7720' },
-];
-function loadLinks() { try { return JSON.parse(localStorage.getItem(LINKS_KEY)) || defaultLinks; } catch { return defaultLinks; } }
-function saveLinks(links) { localStorage.setItem(LINKS_KEY, JSON.stringify(links)); }
-function renderLinks() {
-  const el = document.getElementById('quick-links-list');
-  const links = loadLinks();
-  el.innerHTML = '';
-  if (!links.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;">No links yet. Add one above.</div>'; return; }
-  links.forEach((link, i) => {
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:0.5rem;';
-    row.innerHTML = `<a href="${link.url}" target="_blank" rel="noopener" style="flex:1;font-size:0.82rem;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" class="btn btn-ghost">${link.label}</a>
-      <button class="btn-icon del-link" data-i="${i}" title="Remove"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
-    el.appendChild(row);
-  });
-  el.querySelectorAll('.del-link').forEach(btn => btn.addEventListener('click', () => {
-    const links = loadLinks(); links.splice(+btn.dataset.i, 1); saveLinks(links); renderLinks();
-  }));
-}
-renderLinks();
-
-document.getElementById('add-link-btn').addEventListener('click', () => document.getElementById('add-link-modal').classList.add('open'));
-document.getElementById('close-link-modal').addEventListener('click', () => document.getElementById('add-link-modal').classList.remove('open'));
-document.getElementById('save-link-btn').addEventListener('click', () => {
-  const label = document.getElementById('link-label').value.trim();
-  const url   = document.getElementById('link-url').value.trim();
-  if (!label || !url) { toast('Fill in both fields', 'error'); return; }
-  const links = loadLinks(); links.push({ label, url }); saveLinks(links); renderLinks();
-  document.getElementById('link-label').value = '';
-  document.getElementById('link-url').value = '';
-  document.getElementById('add-link-modal').classList.remove('open');
-  toast('Link added!', 'success');
-});
+// Alias count
+const aliases = JSON.parse(localStorage.getItem('omnios-aliases') || '[]');
+document.getElementById('alias-count').textContent = aliases.length;
 
 // Daily Focus
 const FOCUS_KEY = 'omnios-focus-' + new Date().toDateString();
@@ -235,8 +167,136 @@ const focusEl = document.getElementById('focus-text');
 focusEl.value = localStorage.getItem(FOCUS_KEY) || '';
 focusEl.addEventListener('input', () => localStorage.setItem(FOCUS_KEY, focusEl.value));
 
-// Alias count
-const aliases = JSON.parse(localStorage.getItem('omnios-aliases') || '[]');
-document.getElementById('alias-count').textContent = aliases.length;
+// ── Quick Links ────────────────────────────────────────────────────────────
+const LINKS_KEY = 'omnios-quick-links';
+let _editLinkIndex = -1;
+
+function loadLinks() { try { return JSON.parse(localStorage.getItem(LINKS_KEY)) || []; } catch { return []; } }
+function saveLinks(links) { localStorage.setItem(LINKS_KEY, JSON.stringify(links)); }
+
+const SVG_PENCIL = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+const SVG_TRASH  = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>`;
+
+function renderLinks() {
+  const el = document.getElementById('quick-links-list');
+  const links = loadLinks();
+  el.innerHTML = '';
+  if (!links.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;">No links yet. Add one above.</div>';
+    return;
+  }
+  links.forEach((link, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:0.35rem;';
+    row.innerHTML = `
+      <a href="${link.url}" target="_blank" rel="noopener" style="flex:1;font-size:0.82rem;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" class="btn btn-ghost">${link.label}</a>
+      <button class="btn-icon edit-link" data-i="${i}" title="Edit" style="flex-shrink:0;color:var(--text-muted);">${SVG_PENCIL}</button>
+      <button class="btn-icon del-link"  data-i="${i}" title="Remove" style="flex-shrink:0;color:var(--text-muted);">${SVG_TRASH}</button>`;
+    el.appendChild(row);
+  });
+  el.querySelectorAll('.edit-link').forEach(btn => btn.addEventListener('click', () => {
+    _editLinkIndex = +btn.dataset.i;
+    const link = loadLinks()[_editLinkIndex];
+    document.getElementById('link-modal-title').textContent = 'Edit Link';
+    document.getElementById('link-label').value = link.label;
+    document.getElementById('link-url').value   = link.url;
+    document.getElementById('save-link-btn').textContent = 'Save Changes';
+    document.getElementById('add-link-modal').classList.add('open');
+  }));
+  el.querySelectorAll('.del-link').forEach(btn => btn.addEventListener('click', () => {
+    const links = loadLinks(); links.splice(+btn.dataset.i, 1); saveLinks(links); renderLinks();
+  }));
+}
+renderLinks();
+
+document.getElementById('add-link-btn').addEventListener('click', () => {
+  _editLinkIndex = -1;
+  document.getElementById('link-modal-title').textContent = 'Add Quick Link';
+  document.getElementById('link-label').value = '';
+  document.getElementById('link-url').value   = '';
+  document.getElementById('save-link-btn').textContent = 'Add Link';
+  document.getElementById('add-link-modal').classList.add('open');
+});
+document.getElementById('close-link-modal').addEventListener('click', () => document.getElementById('add-link-modal').classList.remove('open'));
+document.getElementById('add-link-modal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
+
+document.getElementById('save-link-btn').addEventListener('click', () => {
+  const label = document.getElementById('link-label').value.trim();
+  const url   = document.getElementById('link-url').value.trim();
+  if (!label || !url) { toast('Fill in both fields', 'error'); return; }
+  const links = loadLinks();
+  if (_editLinkIndex === -1) {
+    links.push({ label, url });
+    toast('Link added!', 'success');
+  } else {
+    links[_editLinkIndex] = { label, url };
+    toast('Link updated!', 'success');
+  }
+  saveLinks(links); renderLinks();
+  document.getElementById('link-label').value = '';
+  document.getElementById('link-url').value   = '';
+  document.getElementById('add-link-modal').classList.remove('open');
+});
+
+// ── Load GitHub data from configured username ──────────────────────────────
+async function loadGitHubData() {
+  let username = 'StaticTrace'; // fallback
+  try {
+    const cfg = await apiFetch('/api/config');
+    username = cfg.active?.ui?.github_username || username;
+  } catch(_) {}
+
+  document.getElementById('gh-username-label').textContent = `@${username}`;
+  document.getElementById('gh-profile-link').href = `https://github.com/${username}`;
+
+  // Stats
+  apiFetch(`/api/github-stats/${username}`).then(d => {
+    if (d.error) return;
+    document.getElementById('gh-repos').textContent     = d.repos ?? '—';
+    document.getElementById('gh-followers').textContent = d.followers ?? '—';
+    document.getElementById('gh-stars').textContent     = `${d.stars ?? 0} stars total`;
+    const langsEl = document.getElementById('gh-langs');
+    langsEl.innerHTML = '';
+    const colors = ['#7c6af7','#a78bfa','#60a5fa','#34d399','#fbbf24'];
+    if (d.top_langs && d.top_langs.length) {
+      d.top_langs.forEach(([lang, count], i) => {
+        const pill = document.createElement('span');
+        pill.className = 'tag';
+        pill.style.background = `${colors[i % colors.length]}22`;
+        pill.style.color = colors[i % colors.length];
+        pill.style.border = `1px solid ${colors[i % colors.length]}44`;
+        pill.textContent = lang;
+        langsEl.appendChild(pill);
+      });
+    } else {
+      langsEl.innerHTML = '<span style="color:var(--text-muted);font-size:0.8rem;">No public repos yet</span>';
+    }
+  }).catch(() => {});
+
+  // Activity
+  apiFetch(`/api/github/${username}`).then(d => {
+    const el = document.getElementById('gh-activity');
+    if (!d.events || !d.events.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;">No recent activity found.</div>';
+      return;
+    }
+    el.innerHTML = '';
+    d.events.slice(0,8).forEach(ev => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:flex-start;gap:0.6rem;padding:0.5rem 0;border-bottom:1px solid var(--border-soft);font-size:0.8rem;';
+      const typeMap = { PushEvent:'Push', CreateEvent:'Create', WatchEvent:'Star', ForkEvent:'Fork', IssuesEvent:'Issue', PullRequestEvent:'PR', DeleteEvent:'Delete', ReleaseEvent:'Release' };
+      const type = typeMap[ev.type] || ev.type.replace('Event','');
+      const repo = ev.repo?.name?.split('/')[1] || ev.repo?.name || '—';
+      row.innerHTML = `<span class="tag" style="flex-shrink:0;font-size:0.65rem;">${type}</span>
+        <div style="flex:1;min-width:0;"><div style="color:var(--text-primary);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${repo}</div>
+        <div style="color:var(--text-muted);font-size:0.72rem;">${timeAgo(ev.created_at)}</div></div>`;
+      el.appendChild(row);
+    });
+  }).catch(() => {
+    document.getElementById('gh-activity').innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;">Could not load activity.</div>';
+  });
+}
+
+loadGitHubData();
 </script>
 {% endblock %}

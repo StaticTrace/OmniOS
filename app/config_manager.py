@@ -390,6 +390,20 @@ def delete_from_defaults(
     return {"ok": True, "message": msg}
 
 
+def delete_social_link_by_url(url: str) -> None:
+    """Remove a social link from user defaults that matches the given URL."""
+    user_def = _load_file(DEFAULTS_FILE)
+    if "social_links" not in user_def:
+        return
+    links = user_def["social_links"].get("links", [])
+    new_links = [l for l in links if l.get("url") != url]
+    if len(new_links) == len(links):
+        return
+    user_def["social_links"]["links"] = new_links
+    _save_file(DEFAULTS_FILE, user_def)
+    _reload_into_app()
+
+
 def reset() -> None:
     """
     Discard session overrides. Falls back to user-defined defaults

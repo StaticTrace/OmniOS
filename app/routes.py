@@ -9,6 +9,19 @@ from . import config_manager as _cfg_mgr
 _DOTENV = Path(__file__).parent.parent / ".env"
 
 
+def _derive_icon(url: str) -> str:
+    u = (url or "").lower()
+    if "github.com"    in u: return "github"
+    if "youtube.com"   in u: return "youtube"
+    if "twitter.com"   in u or "x.com" in u: return "twitter"
+    if "linkedin.com"  in u: return "linkedin"
+    if "instagram.com" in u: return "instagram"
+    if "tiktok.com"    in u: return "tiktok"
+    if "twitch.tv"     in u: return "twitch"
+    if "reddit.com"    in u: return "reddit"
+    return "link"
+
+
 def _write_secret(key: str, value: str) -> None:
     """Persist a secret to the project .env file and inject into current process env."""
     lines: list[str] = []
@@ -348,6 +361,65 @@ def register_routes(app: Flask) -> None:
         global IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
         from .config import IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
         return jsonify({"ok": True})
+
+    # ── API: Social Links CRUD ─────────────────────────────────────────────────
+
+    @app.route("/api/social-links")
+    def api_social_links_get():
+        links = _cfg_mgr.get_section_values("social_links").get("links", [])
+        return jsonify({"links": links})
+
+    @app.route("/api/social-links", methods=["POST"])
+    def api_social_links_add():
+        payload = request.get_json(silent=True) or {}
+        link = payload.get("link", {})
+        if not link.get("platform") or not link.get("url"):
+            return jsonify({"ok": False, "message": "platform and url required"}), 400
+        active = _cfg_mgr.get_active()
+        links = list(active.get("social_links", {}).get("links", []))
+        links.append({
+            "platform": link["platform"].strip(),
+            "url":      link["url"].strip(),
+            "icon":     link.get("icon") or _derive_icon(link["url"]),
+        })
+        _cfg_mgr.save_section("social_links", {"links": links})
+        global SOCIAL_LINKS
+        from .config import SOCIAL_LINKS
+        return jsonify({"ok": True, "links": links})
+
+    @app.route("/api/social-links/<int:index>", methods=["PUT"])
+    def api_social_links_update(index):
+        payload = request.get_json(silent=True) or {}
+        link = payload.get("link", {})
+        if not link.get("platform") or not link.get("url"):
+            return jsonify({"ok": False, "message": "platform and url required"}), 400
+        active = _cfg_mgr.get_active()
+        links = list(active.get("social_links", {}).get("links", []))
+        if index < 0 or index >= len(links):
+            return jsonify({"ok": False, "message": "Index out of range"}), 404
+        links[index] = {
+            "platform": link["platform"].strip(),
+            "url":      link["url"].strip(),
+            "icon":     link.get("icon") or _derive_icon(link["url"]),
+        }
+        _cfg_mgr.save_section("social_links", {"links": links})
+        global SOCIAL_LINKS
+        from .config import SOCIAL_LINKS
+        return jsonify({"ok": True, "links": links})
+
+    @app.route("/api/social-links/<int:index>", methods=["DELETE"])
+    def api_social_links_delete(index):
+        active = _cfg_mgr.get_active()
+        links = list(active.get("social_links", {}).get("links", []))
+        if index < 0 or index >= len(links):
+            return jsonify({"ok": False, "message": "Index out of range"}), 404
+        deleted_url = links[index].get("url", "")
+        links.pop(index)
+        _cfg_mgr.save_section("social_links", {"links": links})
+        _cfg_mgr.delete_social_link_by_url(deleted_url)
+        global SOCIAL_LINKS
+        from .config import SOCIAL_LINKS
+        return jsonify({"ok": True, "links": links})
 
     # ── Favicon ───────────────────────────────────────────────────────────────
 

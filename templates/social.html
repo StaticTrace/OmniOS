@@ -7,75 +7,105 @@
     <div class="topbar-title">Social Hub</div>
     <div class="topbar-subtitle">All your platforms in one place</div>
   </div>
+  <div class="topbar-actions">
+    <button class="btn btn-primary" id="add-platform-btn" style="font-size:0.78rem;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Platform
+    </button>
+  </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.platform-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.platform-card-actions {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  display: flex;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.platform-card:hover .platform-card-actions { opacity: 1; }
+.action-btn {
+  width: 26px; height: 26px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--text-muted);
+}
+.action-btn:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border); }
+.action-btn.danger:hover { background: rgba(239,68,68,0.12); color: #f87171; border-color: rgba(239,68,68,0.35); }
+.gh-stat-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;margin-bottom:1rem; }
+.gh-stat-cell { text-align:center;padding:0.5rem;background:var(--bg-elevated);border-radius:var(--radius-sm); }
+.gh-stat-val { font-size:1rem;font-weight:700; }
+.gh-stat-lbl { font-size:0.65rem;color:var(--text-muted); }
+</style>
 {% endblock %}
 
 {% block content %}
 
 <!-- Platform Cards -->
-<div class="grid-auto" style="margin-bottom:1.5rem;">
-
-  <!-- GitHub Card -->
-  <div class="card" id="github-card" style="border:1px solid rgba(124,106,247,0.15);">
-    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
-      <div style="width:40px;height:40px;background:linear-gradient(135deg,#333,#555);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
-      </div>
-      <div>
-        <div style="font-weight:600;font-size:0.9rem;">GitHub</div>
-        <div style="font-size:0.72rem;color:var(--text-muted);">@StaticTrace</div>
-      </div>
-      <a href="https://github.com/StaticTrace" target="_blank" rel="noopener" class="btn btn-ghost" style="margin-left:auto;font-size:0.72rem;padding:0.3rem 0.6rem;">Open ↗</a>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;margin-bottom:1rem;" id="gh-social-stats">
-      <div style="text-align:center;padding:0.5rem;background:var(--bg-elevated);border-radius:var(--radius-sm);"><div style="font-size:1rem;font-weight:700;" id="gs-repos">—</div><div style="font-size:0.65rem;color:var(--text-muted);">Repos</div></div>
-      <div style="text-align:center;padding:0.5rem;background:var(--bg-elevated);border-radius:var(--radius-sm);"><div style="font-size:1rem;font-weight:700;" id="gs-stars">—</div><div style="font-size:0.65rem;color:var(--text-muted);">Stars</div></div>
-      <div style="text-align:center;padding:0.5rem;background:var(--bg-elevated);border-radius:var(--radius-sm);"><div style="font-size:1rem;font-weight:700;" id="gs-followers">—</div><div style="font-size:0.65rem;color:var(--text-muted);">Followers</div></div>
-    </div>
-    <div id="gh-bio" style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.75rem;"></div>
-    <div id="gh-recent-repos" style="display:flex;flex-direction:column;gap:0.35rem;"></div>
-  </div>
-
-  <!-- YouTube Card -->
-  <div class="card" style="border:1px solid rgba(255,0,0,0.1);">
-    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
-      <div style="width:40px;height:40px;background:linear-gradient(135deg,#ff0000,#cc0000);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="#ff0000"/></svg>
-      </div>
-      <div>
-        <div style="font-weight:600;font-size:0.9rem;">YouTube</div>
-        <div style="font-size:0.72rem;color:var(--text-muted);">@wtfugdelittlepony7720</div>
-      </div>
-      <a href="https://www.youtube.com/@wtfugdelittlepony7720" target="_blank" rel="noopener" class="btn btn-ghost" style="margin-left:auto;font-size:0.72rem;padding:0.3rem 0.6rem;">Open ↗</a>
-    </div>
-    <div style="padding:1.5rem;background:var(--bg-elevated);border-radius:var(--radius);text-align:center;">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="margin-bottom:0.5rem;"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/></svg>
-      <div style="font-size:0.78rem;color:var(--text-muted);">YouTube API requires a key to fetch data. Add your API key to config to enable live stats.</div>
-      <a href="https://www.youtube.com/@wtfugdelittlepony7720" target="_blank" class="btn btn-ghost" style="margin-top:0.75rem;font-size:0.78rem;">Visit Channel ↗</a>
-    </div>
-  </div>
-
-  <!-- Add Platform Card -->
-  <div class="card" style="border:1px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:180px;cursor:pointer;gap:0.75rem;" id="add-platform-card">
-    <div style="width:40px;height:40px;background:var(--bg-elevated);border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px dashed var(--border);">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    </div>
-    <div style="font-size:0.82rem;color:var(--text-muted);text-align:center;">Add Platform<br/><span style="font-size:0.72rem;">Twitter, Instagram, LinkedIn…</span></div>
-  </div>
-
+<div class="grid-auto" id="platform-cards" style="margin-bottom:1.5rem;">
+  <div style="color:var(--text-muted);font-size:0.8rem;grid-column:1/-1;padding:2rem;text-align:center;">Loading platforms…</div>
 </div>
 
 <!-- GitHub Repos -->
-<div class="card">
+<div class="card" id="github-repos-card" style="display:none;">
   <div class="card-header">
     <div class="card-title">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h6l2 2h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/></svg>
       Public Repositories
     </div>
-    <a href="https://github.com/StaticTrace?tab=repositories" target="_blank" class="btn btn-ghost" style="font-size:0.75rem;padding:0.3rem 0.6rem;">All repos ↗</a>
+    <a id="gh-all-repos-link" href="#" target="_blank" class="btn btn-ghost" style="font-size:0.75rem;padding:0.3rem 0.6rem;">All repos ↗</a>
   </div>
   <div id="repos-grid" class="grid-auto">
-    <div style="color:var(--text-muted);font-size:0.8rem;grid-column:1/-1;">Loading repositories...</div>
+    <div style="color:var(--text-muted);font-size:0.8rem;grid-column:1/-1;">Loading repositories…</div>
+  </div>
+</div>
+
+<!-- Add / Edit Modal -->
+<div class="modal-backdrop" id="link-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="link-modal-title">Add Platform</div>
+      <button class="btn-icon" id="close-link-modal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+      <input type="text" id="link-platform" placeholder="Platform name (e.g. GitHub, Twitter, LinkedIn)" />
+      <input type="url"  id="link-url"      placeholder="Profile URL (https://…)" />
+      <div style="font-size:0.72rem;color:var(--text-muted);">The icon is automatically detected from the URL.</div>
+      <button class="btn btn-primary" id="save-link-modal-btn">Add Platform</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-backdrop" id="del-platform-modal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <div class="modal-title" style="color:#f87171;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        Delete Platform?
+      </div>
+    </div>
+    <p id="del-platform-text" style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1.25rem;"></p>
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+      <button class="btn btn-ghost" id="cancel-del-platform-btn">Cancel</button>
+      <button class="btn" id="confirm-del-platform-btn" style="background:#ef4444;color:#fff;border-color:#ef4444;font-weight:600;">Delete</button>
+    </div>
   </div>
 </div>
 
@@ -83,42 +113,291 @@
 
 {% block extra_js %}
 <script type="module">
-import { apiFetch, timeAgo } from '/static/js/core/os.js';
+import { apiFetch, timeAgo, toast } from '/static/js/core/os.js';
 
-apiFetch('/api/github-stats/StaticTrace').then(d => {
-  if (d.error) return;
-  document.getElementById('gs-repos').textContent     = d.repos;
-  document.getElementById('gs-stars').textContent     = d.stars;
-  document.getElementById('gs-followers').textContent = d.followers;
-  if (d.bio) document.getElementById('gh-bio').textContent = d.bio;
-}).catch(()=>{});
+// ── Icon / colour helpers ──────────────────────────────────────────────────
+const ICONS = {
+  github:    `<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>`,
+  youtube:   `<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="#ff0000"/></svg>`,
+  twitter:   `<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg>`,
+  linkedin:  `<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>`,
+  instagram: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>`,
+  tiktok:    `<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V9.41a8.16 8.16 0 0 0 4.77 1.52V7.5a4.85 4.85 0 0 1-1-.81z"/></svg>`,
+  twitch:    `<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M21 2H3v16h5v4l4-4h5l4-4V2zm-10 9V7m5 4V7"/></svg>`,
+  reddit:    `<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="10"/><path d="M12 8c-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4z" fill="rgba(0,0,0,0.3)"/></svg>`,
+  link:      `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`,
+};
 
-apiFetch('/api/github/StaticTrace').then(d => {
-  if (!d.events) return;
-  const grid = document.getElementById('repos-grid');
+const COLORS = {
+  github:    '#333,#555',
+  youtube:   '#ff0000,#cc0000',
+  twitter:   '#1da1f2,#0d8fd8',
+  linkedin:  '#0077b5,#005e8e',
+  instagram: '#c13584,#e1306c',
+  tiktok:    '#010101,#333',
+  twitch:    '#6441a4,#4b2f8c',
+  reddit:    '#ff4500,#cc3700',
+  link:      'var(--accent),#5b49d9',
+};
+
+function iconFor(link) {
+  const icon = (link.icon || '').toLowerCase();
+  return ICONS[icon] || ICONS.link;
+}
+function colorFor(link) {
+  const icon = (link.icon || '').toLowerCase();
+  return COLORS[icon] || COLORS.link;
+}
+function shortUrl(url) {
+  try { const u = new URL(url); return u.hostname.replace('www.','') + (u.pathname !== '/' ? u.pathname : ''); }
+  catch { return url; }
+}
+function ghUsernameFromUrl(url) {
+  const m = url.match(/github\.com\/([^/?#]+)/i);
+  return m ? m[1] : null;
+}
+
+// ── State ──────────────────────────────────────────────────────────────────
+let _links = [];
+let _editingIndex = -1;
+let _deletingIndex = -1;
+
+// ── SVG micro icons ────────────────────────────────────────────────────────
+const SVG_PENCIL = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+const SVG_TRASH  = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
+
+// ── Render platform cards ──────────────────────────────────────────────────
+function renderCards() {
+  const grid = document.getElementById('platform-cards');
   grid.innerHTML = '';
-  const seen = new Set();
-  const pushEvents = d.events.filter(e => e.type === 'PushEvent' || e.repo);
-  pushEvents.forEach(ev => {
-    const name = ev.repo?.name?.split('/')[1];
-    if (!name || seen.has(name)) return;
-    seen.add(name);
-    const card = document.createElement('a');
-    card.href = `https://github.com/${ev.repo.name}`;
-    card.target = '_blank';
-    card.rel = 'noopener';
-    card.style.cssText = 'display:flex;flex-direction:column;gap:0.4rem;padding:0.875rem;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border-soft);text-decoration:none;transition:border-color 0.15s;';
-    card.onmouseenter = () => card.style.borderColor = 'var(--accent)';
-    card.onmouseleave = () => card.style.borderColor = 'var(--border-soft)';
-    card.innerHTML = `<div style="font-size:0.82rem;font-weight:600;color:var(--text-primary);">${name}</div>
-      <div style="font-size:0.72rem;color:var(--text-muted);">${timeAgo(ev.created_at)}</div>`;
-    grid.appendChild(card);
-  });
-  if (!seen.size) grid.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;grid-column:1/-1;">No recent activity found.</div>';
-}).catch(()=>{ document.getElementById('repos-grid').innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;grid-column:1/-1;">Could not load repos.</div>'; });
 
-document.getElementById('add-platform-card').addEventListener('click', () => {
-  window.OmniOS.toast('Platform management coming soon — edit app/config.py to add links.', 'info', 4000);
+  _links.forEach((link, i) => {
+    const icon   = iconFor(link);
+    const colors = colorFor(link);
+    const isGH   = (link.icon || '').toLowerCase() === 'github';
+    const isYT   = (link.icon || '').toLowerCase() === 'youtube';
+
+    const card = document.createElement('div');
+    card.className = 'card platform-card';
+
+    card.innerHTML = `
+      <div class="platform-card-actions">
+        <button class="action-btn edit-btn" data-i="${i}" title="Edit">${SVG_PENCIL}</button>
+        <button class="action-btn danger del-btn" data-i="${i}" title="Delete">${SVG_TRASH}</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+        <div style="width:40px;height:40px;background:linear-gradient(135deg,${colors});border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          ${icon}
+        </div>
+        <div style="min-width:0;flex:1;">
+          <div style="font-weight:600;font-size:0.9rem;">${link.platform}</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${shortUrl(link.url)}</div>
+        </div>
+        <a href="${link.url}" target="_blank" rel="noopener" class="btn btn-ghost" style="flex-shrink:0;font-size:0.72rem;padding:0.3rem 0.6rem;">Open ↗</a>
+      </div>
+      ${isGH ? `<div class="gh-stat-grid" id="gh-stats-${i}">
+        <div class="gh-stat-cell"><div class="gh-stat-val" id="ghs-repos-${i}">—</div><div class="gh-stat-lbl">Repos</div></div>
+        <div class="gh-stat-cell"><div class="gh-stat-val" id="ghs-stars-${i}">—</div><div class="gh-stat-lbl">Stars</div></div>
+        <div class="gh-stat-cell"><div class="gh-stat-val" id="ghs-fol-${i}">—</div><div class="gh-stat-lbl">Followers</div></div>
+      </div><div id="gh-bio-${i}" style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.5rem;"></div>` : ''}
+      ${isYT ? `<div style="padding:1rem;background:var(--bg-elevated);border-radius:var(--radius);text-align:center;font-size:0.78rem;color:var(--text-muted);line-height:1.5;">YouTube API key required for live stats.<br/><a href="${link.url}" target="_blank" style="color:var(--accent-text);margin-top:0.5rem;display:inline-block;">Visit Channel ↗</a></div>` : ''}
+    `;
+
+    grid.appendChild(card);
+
+    if (isGH) {
+      const username = ghUsernameFromUrl(link.url);
+      if (username) {
+        apiFetch(`/api/github-stats/${username}`).then(d => {
+          if (d.error) return;
+          document.getElementById(`ghs-repos-${i}`).textContent     = d.repos ?? '—';
+          document.getElementById(`ghs-stars-${i}`).textContent     = d.stars ?? '—';
+          document.getElementById(`ghs-fol-${i}`).textContent       = d.followers ?? '—';
+          if (d.bio) document.getElementById(`gh-bio-${i}`).textContent = d.bio;
+        }).catch(() => {});
+
+        // Load repos section once for the first GitHub link
+        const reposCard = document.getElementById('github-repos-card');
+        if (reposCard.style.display === 'none') {
+          reposCard.style.display = '';
+          document.getElementById('gh-all-repos-link').href = `https://github.com/${username}?tab=repositories`;
+          loadRepos(username);
+        }
+      }
+    }
+  });
+
+  // Add Platform dashed card
+  const addCard = document.createElement('div');
+  addCard.className = 'card';
+  addCard.id = 'add-platform-card';
+  addCard.style.cssText = 'border:1px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:180px;cursor:pointer;gap:0.75rem;transition:border-color 0.15s;';
+  addCard.onmouseenter = () => addCard.style.borderColor = 'var(--accent)';
+  addCard.onmouseleave = () => addCard.style.borderColor = 'var(--border)';
+  addCard.innerHTML = `
+    <div style="width:40px;height:40px;background:var(--bg-elevated);border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px dashed var(--border);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+    <div style="font-size:0.82rem;color:var(--text-muted);text-align:center;">Add Platform<br/><span style="font-size:0.72rem;">Twitter, LinkedIn, Instagram…</span></div>
+  `;
+  addCard.addEventListener('click', openAddModal);
+  grid.appendChild(addCard);
+
+  // Bind edit/delete buttons
+  grid.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', e => {
+    e.stopPropagation();
+    openEditModal(+btn.dataset.i);
+  }));
+  grid.querySelectorAll('.del-btn').forEach(btn => btn.addEventListener('click', e => {
+    e.stopPropagation();
+    openDeleteModal(+btn.dataset.i);
+  }));
+}
+
+// ── Load repos ─────────────────────────────────────────────────────────────
+function loadRepos(username) {
+  apiFetch(`/api/github/${username}`).then(d => {
+    const grid = document.getElementById('repos-grid');
+    if (!d.events || !d.events.length) {
+      grid.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;grid-column:1/-1;">No recent activity found.</div>';
+      return;
+    }
+    grid.innerHTML = '';
+    const seen = new Set();
+    d.events.forEach(ev => {
+      const name = ev.repo?.name?.split('/')[1];
+      if (!name || seen.has(name)) return;
+      seen.add(name);
+      const card = document.createElement('a');
+      card.href = `https://github.com/${ev.repo.name}`;
+      card.target = '_blank'; card.rel = 'noopener';
+      card.style.cssText = 'display:flex;flex-direction:column;gap:0.4rem;padding:0.875rem;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border-soft);text-decoration:none;transition:border-color 0.15s;';
+      card.onmouseenter = () => card.style.borderColor = 'var(--accent)';
+      card.onmouseleave = () => card.style.borderColor = 'var(--border-soft)';
+      card.innerHTML = `<div style="font-size:0.82rem;font-weight:600;color:var(--text-primary);">${name}</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);">${timeAgo(ev.created_at)}</div>`;
+      grid.appendChild(card);
+    });
+    if (!seen.size) grid.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;grid-column:1/-1;">No public repos found.</div>';
+  }).catch(() => {
+    document.getElementById('repos-grid').innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;grid-column:1/-1;">Could not load repos.</div>';
+  });
+}
+
+// ── Modal helpers ──────────────────────────────────────────────────────────
+function openAddModal() {
+  _editingIndex = -1;
+  document.getElementById('link-modal-title').textContent = 'Add Platform';
+  document.getElementById('link-platform').value = '';
+  document.getElementById('link-url').value = '';
+  document.getElementById('save-link-modal-btn').textContent = 'Add Platform';
+  document.getElementById('link-modal').classList.add('open');
+  setTimeout(() => document.getElementById('link-platform').focus(), 80);
+}
+
+function openEditModal(index) {
+  _editingIndex = index;
+  const link = _links[index];
+  document.getElementById('link-modal-title').textContent = `Edit — ${link.platform}`;
+  document.getElementById('link-platform').value = link.platform;
+  document.getElementById('link-url').value = link.url;
+  document.getElementById('save-link-modal-btn').textContent = 'Save Changes';
+  document.getElementById('link-modal').classList.add('open');
+  setTimeout(() => document.getElementById('link-platform').focus(), 80);
+}
+
+function openDeleteModal(index) {
+  _deletingIndex = index;
+  const link = _links[index];
+  document.getElementById('del-platform-text').textContent =
+    `This will permanently remove "${link.platform}" from your social links and saved defaults. This cannot be undone.`;
+  document.getElementById('del-platform-modal').classList.add('open');
+}
+
+function closeModals() {
+  document.getElementById('link-modal').classList.remove('open');
+  document.getElementById('del-platform-modal').classList.remove('open');
+}
+
+// ── Modal events ──────────────────────────────────────────────────────────
+document.getElementById('add-platform-btn').addEventListener('click', openAddModal);
+document.getElementById('close-link-modal').addEventListener('click', closeModals);
+document.getElementById('cancel-del-platform-btn').addEventListener('click', closeModals);
+
+document.getElementById('link-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModals(); });
+document.getElementById('del-platform-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModals(); });
+
+// ── Save (Add or Edit) ────────────────────────────────────────────────────
+document.getElementById('save-link-modal-btn').addEventListener('click', async () => {
+  const platform = document.getElementById('link-platform').value.trim();
+  const url      = document.getElementById('link-url').value.trim();
+  if (!platform || !url) { toast('Fill in both fields', 'error'); return; }
+  if (!url.startsWith('http')) { toast('URL must start with http:// or https://', 'error'); return; }
+
+  const btn = document.getElementById('save-link-modal-btn');
+  btn.disabled = true;
+
+  try {
+    let d;
+    if (_editingIndex === -1) {
+      d = await apiFetch('/api/social-links', { method:'POST', body: JSON.stringify({ link: { platform, url } }) });
+    } else {
+      d = await apiFetch(`/api/social-links/${_editingIndex}`, { method:'PUT', body: JSON.stringify({ link: { platform, url } }) });
+    }
+
+    if (d.ok) {
+      _links = d.links;
+      document.getElementById('github-repos-card').style.display = 'none';
+      renderCards();
+      closeModals();
+      toast(_editingIndex === -1 ? 'Platform added!' : 'Platform updated!', 'success');
+    } else {
+      toast(d.message || 'Save failed', 'error');
+    }
+  } catch(e) {
+    toast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
 });
+
+// ── Delete ────────────────────────────────────────────────────────────────
+document.getElementById('confirm-del-platform-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('confirm-del-platform-btn');
+  btn.disabled = true;
+  btn.textContent = 'Deleting…';
+
+  try {
+    const d = await apiFetch(`/api/social-links/${_deletingIndex}`, { method: 'DELETE' });
+    if (d.ok) {
+      _links = d.links;
+      document.getElementById('github-repos-card').style.display = 'none';
+      renderCards();
+      closeModals();
+      toast('Platform deleted.', 'info');
+    } else {
+      toast(d.message || 'Delete failed', 'error');
+    }
+  } catch(e) {
+    toast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Delete';
+  }
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const d = await apiFetch('/api/social-links');
+    _links = d.links || [];
+    renderCards();
+  } catch(e) {
+    document.getElementById('platform-cards').innerHTML =
+      '<div style="color:var(--text-muted);font-size:0.8rem;grid-column:1/-1;">Could not load platforms.</div>';
+  }
+}
+
+init();
 </script>
 {% endblock %}
