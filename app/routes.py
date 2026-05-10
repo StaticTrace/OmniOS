@@ -252,6 +252,12 @@ def register_routes(app: Flask) -> None:
             download_name="omnios-hub.zip",
         )
 
+    # ── Favicon ───────────────────────────────────────────────────────────────
+
+    @app.route("/favicon.ico")
+    def favicon():
+        return send_from_directory(BASE_DIR, "favicon.svg", mimetype="image/svg+xml")
+
     # ── Static fallback ───────────────────────────────────────────────────────
 
     @app.route("/static/<path:path>")
