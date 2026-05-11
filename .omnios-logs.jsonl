@@ -1,0 +1,3 @@
+{"ts": 1778501078.283502, "time": "2026-05-11 12:04:38", "level": "error", "category": "git", "message": "Git push: Configuration incomplete:\n• Repo URL is not set.\n• Git username is not set.\n• Git email is not set.\n• GITHUB_PAT secret "}
+{"ts": 1778501158.7435493, "time": "2026-05-11 12:05:58", "level": "error", "category": "git", "message": "Git push: Configuration incomplete:\n• Repo URL is not set.\n• Git username is not set.\n• Git email is not set.\n• GITHUB_PAT secret "}
+{"ts": 1778501159.832226, "time": "2026-05-11 12:05:59", "level": "info", "category": "git", "message": "Git config updated"}
