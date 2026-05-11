@@ -1,0 +1,80 @@
+You are an expert full‑stack developer and project maintainer.
+I want this project to be ready to:
+
+Be pushed to a GitHub repository, and
+
+Be deployed as a GitHub Pages site from that repo.
+
+Please do all of the following:
+
+Project structure & GitHub Pages
+
+Restructure the files and folders so the project works correctly when hosted on GitHub Pages.
+
+Ensure all asset paths (CSS, JS, images, fonts, etc.) work when served from / or a GitHub Pages subpath (e.g. /repo-name/).
+
+Full audit of the codebase
+
+Review every file: HTML, CSS, JS, config files, and assets.
+
+Remove unused or duplicate files, dead code, and obsolete assets.
+
+Check for broken imports, missing files, and incorrect paths.
+
+Features and functionality
+
+Identify any UI elements or features that currently do nothing and either:
+
+Implement the intended functionality (if it’s clear), or
+
+Remove or clearly disable them with comments explaining why.
+
+Improve existing functions for clarity, performance, and maintainability (without changing behavior unless it’s clearly buggy).
+
+Code quality & consistency
+
+Enforce a consistent coding style across all files (naming, formatting, folder structure).
+
+Refactor overly complex or duplicated logic into reusable functions/modules.
+
+Add clear comments where behavior is non‑obvious.
+
+Optimization
+
+Optimize assets (images, fonts, etc.) where possible (e.g. remove unused images, suggest compression).
+
+Minimize unnecessary network requests and unused libraries.
+
+Ensure the project loads efficiently for a static GitHub Pages deployment.
+
+README.md
+
+Rewrite or update README.md to include:
+
+Project description and main features
+
+Tech stack
+
+How to run locally
+
+How to deploy to GitHub Pages
+
+Any build steps (if applicable)
+
+Final consistency check
+
+Verify that:
+
+All links, scripts, and styles load correctly.
+
+The site works when opened as a static site (no backend).
+
+The structure is suitable for a GitHub repo and GitHub Pages deployment.
+
+When you make changes, explain briefly what you changed and why, especially for:
+
+Deleted files
+
+New or modified features
+
+Major refactors
