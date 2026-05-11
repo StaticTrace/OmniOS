@@ -1,4 +1,7 @@
-// OmniOS Core — shared utilities, toast, and OS init
+// OmniOS Core — shared utilities available to all pages as ES module exports.
+// Import only what you need: import { apiFetch, toast } from '/static/js/core/os.js';
+
+// ── Toast notifications ───────────────────────────────────────────────────────
 
 export function toast(message, type = "info", duration = 3000) {
   const container = document.getElementById("toast-container");
@@ -14,9 +17,16 @@ export function toast(message, type = "info", duration = 3000) {
   setTimeout(() => el.remove(), duration);
 }
 
+// ── Clipboard ─────────────────────────────────────────────────────────────────
+
 export function copyToClipboard(text) {
-  navigator.clipboard.writeText(text).then(() => toast("Copied!", "success")).catch(() => toast("Copy failed", "error"));
+  navigator.clipboard
+    .writeText(text)
+    .then(() => toast("Copied!", "success"))
+    .catch(() => toast("Copy failed", "error"));
 }
+
+// ── Date / time helpers ───────────────────────────────────────────────────────
 
 export function formatDate(ts) {
   if (!ts) return "";
@@ -25,21 +35,25 @@ export function formatDate(ts) {
 }
 
 export function timeAgo(ts) {
-  const now = Date.now();
+  const now  = Date.now();
   const then = typeof ts === "number" && ts < 1e12 ? ts * 1000 : new Date(ts).getTime();
   const diff = Math.floor((now - then) / 1000);
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
-  return `${Math.floor(diff/86400)}d ago`;
+  if (diff < 60)    return "just now";
+  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
 }
+
+// ── DOM helper ────────────────────────────────────────────────────────────────
 
 export function el(tag, cls, html = "") {
   const e = document.createElement(tag);
-  if (cls) e.className = cls;
+  if (cls)  e.className = cls;
   if (html) e.innerHTML = html;
   return e;
 }
+
+// ── Fetch wrapper (throws on non-2xx) ─────────────────────────────────────────
 
 export async function apiFetch(url, opts = {}) {
   const r = await fetch(url, { headers: { "Content-Type": "application/json" }, ...opts });
@@ -47,18 +61,14 @@ export async function apiFetch(url, opts = {}) {
   return r.json();
 }
 
-// Global key bindings
+// ── Global key bindings ───────────────────────────────────────────────────────
+// Close any open modal when Escape is pressed.
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     document.querySelectorAll(".modal-backdrop.open").forEach(m => m.classList.remove("open"));
   }
 });
 
-// Highlight active nav item
-document.querySelectorAll(".nav-item").forEach(item => {
-  if (item.getAttribute("href") === window.location.pathname) {
-    item.classList.add("active");
-  }
-});
-
+// ── Public API ────────────────────────────────────────────────────────────────
+// Expose on window for inline scripts that cannot use ES module imports.
 window.OmniOS = { toast, copyToClipboard, formatDate, timeAgo, el, apiFetch };

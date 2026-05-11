@@ -1,22 +1,27 @@
 # OmniOS Hub
 
-**A self-hosted personal web operating system** — a modular, dark-mode dashboard built with Python/Flask and vanilla JavaScript. Manage your social profiles, GitHub activity, notifications, portfolio, and email aliases from a single clean interface.
+**A self-hosted personal web operating system** — a modular, dark-mode dashboard built with Python/Flask and vanilla JavaScript. Manage your identity, social profiles, GitHub activity, notifications, portfolio, email aliases, AI chat, system logs, and configuration snapshots from a single clean interface.
+
+> **Deployment note:** OmniOS Hub is a Python/Flask application with a server-side backend. It **cannot** be deployed to GitHub Pages (which only serves static files). See the [Deployment](#deployment) section for supported hosting platforms.
 
 ---
 
 ## Features
 
-- **Modular dashboard** — independent pages for Social Hub, Notifications, Dashboard, Portfolio, and more
-- **Live GitHub integration** — real-time stats, activity feed, top languages, and public repositories
+- **Modular dashboard** — independent pages for every part of your digital life
+- **Live GitHub integration** — real-time stats, activity feed, top languages, and public repos
 - **Social Hub** — manage all your platform links with full add / edit / delete support
 - **Notifications feed** — aggregates GitHub activity and custom RSS feeds in one place
-- **Portfolio** — auto-populated from GitHub + custom project cards with edit/delete
+- **Portfolio** — auto-populated from GitHub repos + custom project cards with edit/delete
 - **Email Alias manager** — generate and track disposable email aliases (localStorage)
+- **AI Assistant** — multi-provider chat (OpenAI, Anthropic, Google Gemini, custom endpoint) with adjustable temperature, max tokens, and system prompt
+- **Connections** — unified API key manager for all integrated services; stored securely in `.env`
+- **System Logs** — structured activity log for every OmniOS module with category and level filters
+- **Config Snapshots** — config version control: capture, label, browse, restore, and delete snapshots; restoring auto-creates a safety backup first
 - **Config Editor** — live in-browser editor for all settings (identity, social links, UI preferences, page visibility)
-- **Three-layer config system** — factory defaults → user defaults → session overrides; Reset to Defaults never loses user-saved baseline
-- **Default Config Manager** — save your current config as a permanent baseline, delete individual saved items, or factory-reset entirely
-- **Git manager** — configure remote, branch, and push directly from the settings page
-- **Danger Zone** — per-module data wipe with clean-all support
+- **Three-layer config system** — factory defaults → user defaults → session overrides
+- **Git manager** — configure a remote and push directly from the Settings page
+- **Danger Zone** — per-module data wipe and clean-all, registered through a central data registry
 - **Responsive dark UI** — custom CSS design system with accent colours, modals, toasts, and tag chips
 
 ---
@@ -32,6 +37,10 @@
 | Portfolio | `/portfolio` | GitHub repos + custom projects with edit/delete |
 | Email Aliases | `/email-alias` | Disposable alias generator and tracker |
 | Contact | `/contact` | Contact card with social links |
+| AI Assistant | `/ai` | Multi-provider AI chat with provider/model/system-prompt config |
+| Connections | `/connections` | Add, update, and remove API keys for all services |
+| System Logs | `/logs` | Structured log viewer with category, level, and keyword filters |
+| Snapshots | `/snapshots` | Config version control — capture and restore any state |
 | Settings | `/settings` | System info, Git config, Default Config Manager, data wipe |
 | Config Editor | `/config` | Live editor for all config sections |
 
@@ -40,62 +49,74 @@
 ## Project Structure
 
 ```
-OmniOS/
-├── main.py                    # Entry point: python3 main.py
-├── wsgi.py                    # Gunicorn WSGI entry point
+omnios-hub/
+├── main.py                      # Entry point: python3 main.py
+├── wsgi.py                      # Gunicorn WSGI entry point
+├── requirements.txt             # pip-compatible dependency list
+├── pyproject.toml               # PEP 517 project metadata
+├── .env.example                 # Template for required environment variables
+│
+├── .github/
+│   └── workflows/
+│       └── ci.yml               # GitHub Actions: syntax check + startup test
 │
 ├── app/
-│   ├── __init__.py            # Flask app factory
-│   ├── config.py              # In-memory config constants (IDENTITY, SOCIAL_LINKS, …)
-│   ├── config_manager.py      # 3-layer config system (factory → defaults → overrides)
-│   ├── data_registry.py       # Per-module data wipe registry
-│   ├── git_manager.py         # Git remote / push helpers
-│   └── routes.py              # All page routes + API endpoints
+│   ├── __init__.py              # Flask app factory + context processor
+│   ├── config.py                # In-memory config constants (IDENTITY, SOCIAL_LINKS, …)
+│   ├── config_manager.py        # Three-layer config system (factory → defaults → overrides)
+│   ├── data_registry.py         # Per-module data wipe registry (all modules registered here)
+│   ├── git_manager.py           # Git remote / push helpers
+│   ├── ai_manager.py            # Multi-provider AI chat (OpenAI / Anthropic / Google / custom)
+│   ├── log_manager.py           # Structured JSONL logging
+│   ├── snapshot_manager.py      # Config snapshot capture / restore / delete
+│   └── routes.py                # All page routes + API endpoints
 │
 ├── templates/
-│   ├── base.html              # Shared layout (sidebar, topbar, modals)
-│   ├── index.html             # Home page
-│   ├── dashboard.html         # Dashboard widgets
-│   ├── social.html            # Social Hub (dynamic platform cards)
-│   ├── notifications.html     # Notification feed + RSS sources
-│   ├── portfolio.html         # GitHub projects + custom projects
-│   ├── email_alias.html       # Email alias manager
-│   ├── contact.html           # Contact card
-│   ├── settings.html          # Settings & Default Config Manager
-│   └── config.html            # Live Config Editor
+│   ├── base.html                # Shared layout (sidebar, topbar, toast container)
+│   ├── index.html               # Home page
+│   ├── dashboard.html           # Dashboard widgets
+│   ├── social.html              # Social Hub
+│   ├── notifications.html       # Notification feed + RSS sources
+│   ├── portfolio.html           # GitHub repos + custom projects
+│   ├── email_alias.html         # Email alias manager
+│   ├── contact.html             # Contact card
+│   ├── ai.html                  # AI Assistant (two-panel chat)
+│   ├── connections.html         # API key manager
+│   ├── logs.html                # System log viewer
+│   ├── snapshots.html           # Config snapshot timeline
+│   ├── settings.html            # Settings & Default Config Manager
+│   └── config.html              # Live Config Editor
 │
-├── static/
-│   ├── css/
-│   │   └── style.css          # Full design system (variables, components, layout)
-│   └── js/
-│       └── core/
-│           └── os.js          # Shared JS utilities (apiFetch, toast, timeAgo, …)
-│
-├── .omnios-config.json        # Session overrides (auto-generated, gitignored)
-└── .omnios-defaults.json      # User-saved baseline (auto-generated, gitignored)
+└── static/
+    ├── css/
+    │   ├── style.css            # Full design system (variables, components, layout)
+    │   └── modules.css          # Page-specific component overrides
+    └── js/
+        └── core/
+            └── os.js            # Shared JS utilities (apiFetch, toast, timeAgo, …)
 ```
 
 ---
 
 ## Config System
 
-OmniOS uses a three-layer configuration merge at runtime:
+OmniOS uses a three-layer configuration merge at every request:
 
 ```
-Factory defaults (hardcoded in config_manager.py)
+Factory defaults  (hardcoded in config_manager.py)
         ↓  merged with
-User defaults (.omnios-defaults.json)
+User defaults     (.omnios-defaults.json — your saved baseline)
         ↓  merged with
-Session overrides (.omnios-config.json)
+Session overrides (.omnios-config.json — live edits from Config Editor)
         ↓
-Active config (what the app reads)
+Active config     (what the app reads and serves to templates)
 ```
 
 | Action | Effect |
 |---|---|
 | **Save Changes** (Config Editor) | Writes to `.omnios-config.json` |
-| **Save As Default** | Promotes active config into `.omnios-defaults.json`, clears overrides |
-| **Reset to Defaults** | Deletes `.omnios-config.json`; falls back to user defaults (or factory if none) |
+| **Save As Default** | Promotes active config to `.omnios-defaults.json`, clears overrides |
+| **Reset to Defaults** | Deletes `.omnios-config.json`; falls back to saved defaults (or factory) |
 | **Factory Reset** | Deletes both files; returns to hardcoded baseline |
 
 ---
@@ -106,11 +127,11 @@ Active config (what the app reads)
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/config` | Returns active merged config + schema |
+| `GET` | `/api/config` | Active merged config + schema |
 | `POST` | `/api/config` | Save section overrides |
-| `POST` | `/api/config/reset` | Reset to defaults (delete overrides) |
+| `POST` | `/api/config/reset` | Reset to defaults |
 | `GET` | `/api/config/defaults` | Get defaults manifest |
-| `POST` | `/api/config/defaults/save` | Save current active config as user defaults |
+| `POST` | `/api/config/defaults/save` | Save active config as user defaults |
 | `POST` | `/api/config/defaults/delete` | Delete an item from user defaults |
 | `POST` | `/api/config/defaults/factory-reset` | Wipe both config files |
 
@@ -121,7 +142,7 @@ Active config (what the app reads)
 | `GET` | `/api/social-links` | List all configured social links |
 | `POST` | `/api/social-links` | Add a new social link |
 | `PUT` | `/api/social-links/<index>` | Update a social link by index |
-| `DELETE` | `/api/social-links/<index>` | Delete a link (also removes from defaults) |
+| `DELETE` | `/api/social-links/<index>` | Delete a link |
 
 ### GitHub
 
@@ -129,6 +150,39 @@ Active config (what the app reads)
 |---|---|---|
 | `GET` | `/api/github/<username>` | Public events feed |
 | `GET` | `/api/github-stats/<username>` | Repos, stars, followers, top languages, bio |
+
+### AI Assistant
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/ai/config` | Get saved AI provider/model config |
+| `POST` | `/api/ai/config` | Update AI config |
+| `POST` | `/api/ai/chat` | Send a message; returns streamed or full response |
+
+### Connections
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/connections` | List all services with connection status |
+| `POST` | `/api/connections` | Add or update an API key for a service |
+| `DELETE` | `/api/connections/<service>` | Remove an API key |
+
+### Logs
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/logs` | Fetch log entries (query: `category`, `level`, `q`, `limit`) |
+| `GET` | `/api/logs/stats` | Aggregate counts by category and level |
+| `POST` | `/api/logs/clear` | Delete all log entries |
+
+### Snapshots
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/snapshots` | List all snapshots |
+| `POST` | `/api/snapshots` | Capture a new snapshot (optional `label`) |
+| `POST` | `/api/snapshots/<id>/restore` | Restore a snapshot (auto-backup first) |
+| `DELETE` | `/api/snapshots/<id>` | Delete a snapshot |
 
 ### Other
 
@@ -139,23 +193,32 @@ Active config (what the app reads)
 | `GET` | `/api/data/manifest` | List all registered data modules |
 | `POST` | `/api/data/wipe` | Wipe all module data (requires `"confirm":"DELETE"`) |
 | `GET/POST` | `/api/git/config` | Read or write git configuration |
-| `POST` | `/api/git/push` | Push to remote |
+| `POST` | `/api/git/push` | Push to configured remote |
 
 ---
 
 ## Getting Started
 
+### Prerequisites
+
+- Python 3.12 or newer
+- pip
+
 ### Run locally
 
 ```bash
-# Clone
-git clone https://github.com/your-username/your-omnios-repo.git
-cd OmniOS
+# 1. Clone the repository
+git clone https://github.com/your-username/omnios-hub.git
+cd omnios-hub
 
-# Install dependencies
-pip install flask requests feedparser gunicorn
+# 2. Install dependencies
+pip install -r requirements.txt
 
-# Start (development)
+# 3. Copy the environment template and fill in your keys
+cp .env.example .env
+# Edit .env with your favourite editor — at minimum set GITHUB_PAT
+
+# 4. Start the development server
 python3 main.py
 ```
 
@@ -164,40 +227,92 @@ Open [http://localhost:5000](http://localhost:5000).
 ### Production (Gunicorn)
 
 ```bash
-gunicorn wsgi:app --bind 0.0.0.0:5000
+gunicorn wsgi:app --bind 0.0.0.0:5000 --workers 2
 ```
 
 ---
 
-## Configuration
+## Deployment
 
-All settings are managed through the **Config Editor** at `/config`. You can also edit the hardcoded factory defaults directly in `app/config_manager.py`.
+OmniOS Hub requires a Python runtime. Choose any of the following:
 
-### Sections
+### Replit (recommended — zero config)
 
-| Section | Key settings |
-|---|---|
-| **Identity** | Display name, tagline, bio, avatar URL |
-| **Social Links** | Platform name + URL pairs (icon auto-detected from URL) |
-| **Notification Sources** | Toggle GitHub, YouTube, RSS feeds |
-| **UI Preferences** | GitHub username, weather location, sidebar label |
-| **Page Visibility** | Show/hide individual pages from the sidebar |
+1. Fork or import this repository into [Replit](https://replit.com).
+2. Set your secrets in the **Secrets** panel (or use the Connections page inside OmniOS).
+3. Click **Run** — Replit detects the Flask app automatically.
+4. Hit **Deploy** to get a persistent public URL.
 
-### Environment Variables
+### Render
+
+1. Create a new **Web Service** and connect your GitHub repository.
+2. Set **Runtime** to Python 3, **Build Command** to `pip install -r requirements.txt`, and **Start Command** to `gunicorn wsgi:app --bind 0.0.0.0:$PORT`.
+3. Add your environment variables under **Environment**.
+4. Deploy. Render provides a free tier with automatic HTTPS.
+
+### Railway
+
+1. Create a new project from your GitHub repository.
+2. Railway auto-detects Python. Set the start command to `gunicorn wsgi:app --bind 0.0.0.0:$PORT`.
+3. Add environment variables under **Variables**.
+4. Deploy.
+
+### Fly.io
+
+```bash
+# Install flyctl, then:
+fly launch          # auto-detects Python, creates fly.toml
+fly secrets set GITHUB_PAT=your_token_here
+fly deploy
+```
+
+### VPS / self-hosted
+
+```bash
+pip install -r requirements.txt
+gunicorn wsgi:app --bind 0.0.0.0:5000 --workers 2 --daemon
+# Optionally put Nginx or Caddy in front for TLS.
+```
+
+---
+
+## Environment Variables
+
+Copy `.env.example` to `.env` and fill in the values you need. All variables are optional — OmniOS works without any of them, but GitHub API calls will be rate-limited and AI features will require keys.
 
 | Variable | Description |
 |---|---|
-| `GITHUB_PAT` | GitHub Personal Access Token (optional — increases API rate limit) |
+| `GITHUB_PAT` | GitHub Personal Access Token — increases API rate limit; required for private repos |
+| `OPENAI_API_KEY` | OpenAI API key for the AI Assistant |
+| `ANTHROPIC_API_KEY` | Anthropic (Claude) API key |
+| `GOOGLE_AI_KEY` | Google Gemini API key |
+| `CUSTOM_AI_KEY` | Key for any OpenAI-compatible custom endpoint |
+| `YOUTUBE_API_KEY` | YouTube Data API v3 key (Notifications feed) |
+
+All keys can also be added and removed live through the **Connections** page without restarting the server.
 
 ---
 
 ## Tech Stack
 
-- **Python 3.12 / Flask** — backend, routing, API proxy
-- **Jinja2** — server-side templating
-- **Vanilla JavaScript** — ES modules, no build step, no framework
-- **CSS3** — custom design system with CSS variables, grid, flexbox
-- **Gunicorn** — production WSGI server
+| Layer | Technology |
+|---|---|
+| Backend | Python 3.12, Flask |
+| Templating | Jinja2 |
+| Frontend | Vanilla JavaScript (ES modules, no build step) |
+| Styling | CSS3 — custom design system with CSS variables, grid, flexbox |
+| Production server | Gunicorn |
+| Config persistence | JSON files (`.omnios-*.json`) + `.env` |
+| Logging | JSONL (newline-delimited JSON) |
+| CI | GitHub Actions |
+
+---
+
+## Contributing
+
+1. Fork the repository and create a feature branch (`git checkout -b feat/my-feature`).
+2. Make your changes, keeping style consistent with the existing codebase.
+3. Open a pull request — the CI workflow will run a syntax check automatically.
 
 ---
 

@@ -1,10 +1,9 @@
 [project]
-name = "repl-nix-workspace"
-version = "0.1.0"
-description = "Add your description here"
+name = "omnios-hub"
+version = "1.0.0"
+description = "A self-hosted personal web OS — modular dark-mode dashboard built with Python/Flask and vanilla JavaScript"
 requires-python = ">=3.12"
 dependencies = [
-    "feedparser>=6.0.12",
     "flask>=3.1.3",
     "gunicorn>=26.0.0",
     "python-dotenv>=1.2.2",

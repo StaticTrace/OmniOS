@@ -33,8 +33,9 @@ node_modules/
 .agents/
 .upm/
 replit.nix
+.replit
 
-# ── Secrets — never commit the live .env (use .env.example for templates) ────
+# ── Secrets — never commit the live .env (use .env.example as the template) ──
 .env
 
 # ── OS / editor noise ─────────────────────────────────────────────────────────
@@ -47,8 +48,15 @@ Thumbs.db
 # ── Project-generated archives ────────────────────────────────────────────────
 zipFile.zip
 omnios-hub.zip
+*.zip
 
-# NOTE: Everything else — hidden files (.env.example, .omnios* configs,
-#       all JSON configs), all module dirs, all backend/frontend files,
-#       static assets, templates, and system files — is intentionally
-#       included in every push via `git add -A`.
+# ── OmniOS user data & generated files ───────────────────────────────────────
+# These are runtime-generated files that contain personal data or can be large.
+# The config files (.omnios-defaults.json, .omnios-config.json, etc.) are
+# intentionally committed so your settings travel with the repo — exclude them
+# here only if you want a clean "factory default" repo for others to clone.
+.omnios-logs.jsonl
+.omnios-snapshots/
+
+# ── Prompt / agent scratch files ──────────────────────────────────────────────
+attached_assets/

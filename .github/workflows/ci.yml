@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    name: Syntax & dependency check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Check Python syntax
+        run: |
+          python -m py_compile main.py
+          python -m py_compile wsgi.py
+          python -m py_compile app/__init__.py
+          python -m py_compile app/routes.py
+          python -m py_compile app/config.py
+          python -m py_compile app/config_manager.py
+          python -m py_compile app/data_registry.py
+          python -m py_compile app/git_manager.py
+          python -m py_compile app/ai_manager.py
+          python -m py_compile app/log_manager.py
+          python -m py_compile app/snapshot_manager.py
+
+      - name: Verify app starts
+        run: |
+          timeout 5 python main.py &
+          sleep 3
+          curl -sf http://localhost:5000/ || true

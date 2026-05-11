@@ -18,6 +18,7 @@ Usage (in any module):
 """
 
 import os
+import shutil
 from pathlib import Path
 from typing import Callable
 
@@ -60,11 +61,11 @@ def get_manifest() -> list[dict]:
 
 
 def get_all_client_keys() -> list[str]:
-    """Collect every localStorage key across all modules."""
+    """Collect every localStorage key across all modules (deduplicated)."""
     keys: list[str] = []
     for m in _MODULES:
         keys.extend(m["client_keys"])
-    return list(dict.fromkeys(keys))  # deduplicate, preserve order
+    return list(dict.fromkeys(keys))
 
 
 def run_all_cleaners() -> dict:
@@ -91,7 +92,6 @@ def run_all_cleaners() -> dict:
 
 # ── Module registrations ──────────────────────────────────────────────────────
 
-# Home — no persistent storage yet; registered for future use
 register_module(
     id="home",
     label="Home",
@@ -99,7 +99,6 @@ register_module(
     client_keys=["omnios-home-prefs"],
 )
 
-# Dashboard
 register_module(
     id="dashboard",
     label="Dashboard",
@@ -107,7 +106,6 @@ register_module(
     client_keys=["omnios-quick-links", "omnios-focus"],
 )
 
-# Social Hub — no persisted client state currently; registered for future use
 register_module(
     id="social",
     label="Social Hub",
@@ -115,7 +113,6 @@ register_module(
     client_keys=["omnios-social-prefs"],
 )
 
-# Notifications
 register_module(
     id="notifications",
     label="Notifications",
@@ -123,7 +120,6 @@ register_module(
     client_keys=["omnios-rss-sources"],
 )
 
-# Email Aliases
 register_module(
     id="email-alias",
     label="Email Aliases",
@@ -131,7 +127,6 @@ register_module(
     client_keys=["omnios-aliases"],
 )
 
-# Portfolio
 register_module(
     id="portfolio",
     label="Portfolio",
@@ -139,7 +134,6 @@ register_module(
     client_keys=["omnios-projects"],
 )
 
-# Contact
 register_module(
     id="contact",
     label="Contact",
@@ -147,7 +141,63 @@ register_module(
     client_keys=["omnios-contact-msgs"],
 )
 
-# Git / GitHub integration (server-side)
+# ── AI Assistant ──────────────────────────────────────────────────────────────
+
+def _clean_ai_data() -> list[str]:
+    done = []
+    cfg_file = BASE_DIR / ".omnios-ai-config.json"
+    if cfg_file.exists():
+        cfg_file.unlink()
+        done.append("Deleted .omnios-ai-config.json (AI provider and model preferences)")
+    return done
+
+register_module(
+    id="ai-assistant",
+    label="AI Assistant",
+    description="Saved AI provider, model, and system prompt preferences; chat history",
+    client_keys=["omnios-ai-history"],
+    server_cleaner=_clean_ai_data,
+)
+
+# ── System Logs ───────────────────────────────────────────────────────────────
+
+def _clean_logs() -> list[str]:
+    done = []
+    log_file = BASE_DIR / ".omnios-logs.jsonl"
+    if log_file.exists():
+        log_file.unlink()
+        done.append("Deleted .omnios-logs.jsonl (all system log entries)")
+    return done
+
+register_module(
+    id="system-logs",
+    label="System Logs",
+    description="Structured activity log recorded by all OmniOS modules",
+    client_keys=[],
+    server_cleaner=_clean_logs,
+)
+
+# ── Snapshots ─────────────────────────────────────────────────────────────────
+
+def _clean_snapshots() -> list[str]:
+    done = []
+    snap_dir = BASE_DIR / ".omnios-snapshots"
+    if snap_dir.exists():
+        count = len(list(snap_dir.glob("*.json")))
+        shutil.rmtree(snap_dir)
+        done.append(f"Deleted .omnios-snapshots/ ({count} snapshot(s) removed)")
+    return done
+
+register_module(
+    id="snapshots",
+    label="Config Snapshots",
+    description="Saved configuration snapshots created via the Snapshots page",
+    client_keys=[],
+    server_cleaner=_clean_snapshots,
+)
+
+# ── Git / GitHub integration ──────────────────────────────────────────────────
+
 def _clean_git_config() -> list[str]:
     done = []
     cfg_file = BASE_DIR / ".omnios-git-config.json"
@@ -164,14 +214,25 @@ register_module(
     server_cleaner=_clean_git_config,
 )
 
-# Secrets / .env (server-side)
+# ── Stored Secrets (.env) ─────────────────────────────────────────────────────
+
+# All keys managed by the Connections page and the Git integration.
+_ALL_SECRET_KEYS = (
+    "GITHUB_PAT",
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GOOGLE_AI_KEY",
+    "YOUTUBE_API_KEY",
+    "CUSTOM_AI_KEY",
+)
+
 def _clean_env_secrets() -> list[str]:
     done = []
     env_file = BASE_DIR / ".env"
     if env_file.exists():
         env_file.unlink()
-        done.append("Deleted .env (GITHUB_PAT and other secrets)")
-    for key in ("GITHUB_PAT",):
+        done.append("Deleted .env (all stored secrets)")
+    for key in _ALL_SECRET_KEYS:
         if key in os.environ:
             del os.environ[key]
             done.append(f"Cleared {key} from process environment")
@@ -180,28 +241,31 @@ def _clean_env_secrets() -> list[str]:
 register_module(
     id="env-secrets",
     label="Stored Secrets",
-    description="GitHub PAT and any other saved environment secrets",
+    description="All API keys and secrets saved via the Connections page",
     client_keys=[],
     server_cleaner=_clean_env_secrets,
 )
 
-# Generic catch-all for future *.omnios-data.json files
-def _clean_data_files() -> list[str]:
+# ── Connections metadata ──────────────────────────────────────────────────────
+
+def _clean_connections_meta() -> list[str]:
     done = []
-    for f in BASE_DIR.glob("*.omnios-data.json"):
-        f.unlink()
-        done.append(f"Deleted {f.name}")
+    cfg_file = BASE_DIR / ".omnios-connections.json"
+    if cfg_file.exists():
+        cfg_file.unlink()
+        done.append("Deleted .omnios-connections.json (connection metadata)")
     return done
 
 register_module(
-    id="user-data-files",
-    label="Data Files",
-    description="Any additional module data files stored on disk",
+    id="connections",
+    label="Connections",
+    description="Saved connection metadata for all configured API integrations",
     client_keys=[],
-    server_cleaner=_clean_data_files,
+    server_cleaner=_clean_connections_meta,
 )
 
-# Config overrides (.omnios-config.json) — session edits on top of defaults
+# ── Config overrides ──────────────────────────────────────────────────────────
+
 def _clean_config_overrides() -> list[str]:
     done = []
     cfg_file = BASE_DIR / ".omnios-config.json"
@@ -218,14 +282,14 @@ register_module(
     server_cleaner=_clean_config_overrides,
 )
 
-# User-defined defaults (.omnios-defaults.json) — custom baseline
+# ── Saved default config ──────────────────────────────────────────────────────
+
 def _clean_config_defaults() -> list[str]:
     done = []
     defaults_file = BASE_DIR / ".omnios-defaults.json"
     if defaults_file.exists():
         defaults_file.unlink()
         done.append("Deleted .omnios-defaults.json (user-saved default config)")
-    # Also trigger in-process reload so app reverts to factory
     try:
         from .config_manager import _reload_into_app
         _reload_into_app()
@@ -239,4 +303,21 @@ register_module(
     description="Your custom default configuration saved via 'Save As Default'",
     client_keys=[],
     server_cleaner=_clean_config_defaults,
+)
+
+# ── Catch-all for legacy *.omnios-data.json files ─────────────────────────────
+
+def _clean_data_files() -> list[str]:
+    done = []
+    for f in BASE_DIR.glob("*.omnios-data.json"):
+        f.unlink()
+        done.append(f"Deleted {f.name}")
+    return done
+
+register_module(
+    id="user-data-files",
+    label="Legacy Data Files",
+    description="Any additional module data files stored on disk",
+    client_keys=[],
+    server_cleaner=_clean_data_files,
 )
