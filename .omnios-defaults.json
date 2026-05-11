@@ -11,12 +11,12 @@
   "notifications": {
     "github_enabled": true,
     "youtube_enabled": true,
-    "rss_enabled": true
+    "rss_enabled": false
   },
   "ui": {
-    "github_username": "StaticTrace",
-    "weather_lat": "51.5074",
-    "weather_lon": "-0.1278",
+    "github_username": "",
+    "weather_lat": "",
+    "weather_lon": "",
     "sidebar_label": "Personal OS"
   },
   "pages": {

@@ -219,7 +219,7 @@ def register_routes(app: Flask) -> None:
         label = data.get("label", "").strip().lower().replace(" ", "-") or "alias"
         seed  = f"{label}-{time.time()}"
         h     = hashlib.sha1(seed.encode()).hexdigest()[:8]
-        alias = f"{label}-{h}@omnios.hub"
+        alias = f"{label}-{h}@alias.local"
         return jsonify({"alias": alias, "label": label, "created": int(time.time())})
 
     @app.route("/api/alias/check", methods=["POST"])
@@ -420,6 +420,82 @@ def register_routes(app: Flask) -> None:
         global SOCIAL_LINKS
         from .config import SOCIAL_LINKS
         return jsonify({"ok": True, "links": links})
+
+    # ── API: Personal Data Scrub ──────────────────────────────────────────────
+
+    @app.route("/api/scrub-personal-data", methods=["POST"])
+    def api_scrub_personal_data():
+        import json as _json
+        log: list[str] = []
+
+        BASE = Path(__file__).parent.parent
+        defaults_file = BASE / ".omnios-defaults.json"
+        config_file   = BASE / ".omnios-config.json"
+        git_cfg_file  = BASE / ".omnios-git-config.json"
+        env_file      = BASE / ".env"
+
+        _PERSONAL_UI_KEYS = {"github_username", "weather_lat", "weather_lon"}
+
+        def _scrub_config_file(path: Path, label: str) -> None:
+            if not path.exists():
+                return
+            try:
+                data = _json.loads(path.read_text())
+            except Exception:
+                return
+            changed = False
+            # Wipe social links
+            if "social_links" in data and data["social_links"].get("links"):
+                data["social_links"]["links"] = []
+                log.append(f"{label}: cleared social_links")
+                changed = True
+            # Wipe personal UI fields
+            if "ui" in data:
+                for key in _PERSONAL_UI_KEYS:
+                    if data["ui"].get(key):
+                        data["ui"][key] = ""
+                        log.append(f"{label}: cleared ui.{key}")
+                        changed = True
+            if changed:
+                path.write_text(_json.dumps(data, indent=2, ensure_ascii=False))
+
+        # 1. Scrub defaults file
+        _scrub_config_file(defaults_file, ".omnios-defaults.json")
+
+        # 2. Scrub session overrides file
+        _scrub_config_file(config_file, ".omnios-config.json")
+
+        # 3. Wipe git config
+        if git_cfg_file.exists():
+            try:
+                cfg = _json.loads(git_cfg_file.read_text())
+                if any(cfg.get(k) for k in ("repo_url", "username", "email")):
+                    git_cfg_file.write_text(_json.dumps({"repo_url": "", "username": "", "email": ""}, indent=2))
+                    log.append(".omnios-git-config.json: cleared repo_url, username, email")
+            except Exception:
+                pass
+
+        # 4. Wipe .env secrets
+        if env_file.exists():
+            env_file.unlink()
+            log.append(".env: deleted (secrets removed)")
+        for key in ("GITHUB_PAT",):
+            if key in os.environ:
+                del os.environ[key]
+                log.append(f"Process env: cleared {key}")
+
+        # 5. Reload live app state
+        try:
+            from . import config_manager as _cm
+            _cm._reload_into_app()
+            log.append("App config reloaded — personal data cleared from live state")
+        except Exception as exc:
+            log.append(f"Reload warning: {exc}")
+
+        if not log:
+            log.append("No personal data found — system is already clean.")
+
+        return jsonify({"ok": True, "log": log})
 
     # ── Favicon ───────────────────────────────────────────────────────────────
 

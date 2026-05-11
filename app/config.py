@@ -5,10 +5,7 @@ IDENTITY = {
     "avatar": None,
 }
 
-SOCIAL_LINKS = [
-    {"platform": "GitHub",  "url": "https://github.com/StaticTrace",                           "icon": "github"},
-    {"platform": "YouTube", "url": "https://www.youtube.com/@wtfugdelittlepony7720",            "icon": "youtube"},
-]
+SOCIAL_LINKS = []
 
 PAGES = [
     {"id": "dashboard",     "label": "Dashboard",      "icon": "grid",           "route": "/dashboard"},

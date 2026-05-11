@@ -109,10 +109,7 @@ register_section(
     description="Platforms shown on your Home card and Social Hub page.",
     icon="share-2",
     fields=[],
-    defaults={"links": [
-        {"platform": "GitHub",  "url": "https://github.com/StaticTrace",                  "icon": "github"},
-        {"platform": "YouTube", "url": "https://www.youtube.com/@wtfugdelittlepony7720",   "icon": "youtube"},
-    ]},
+    defaults={"links": []},
 )
 
 register_section(
@@ -144,17 +141,17 @@ register_section(
     fields=[
         {
             "key": "github_username", "label": "GitHub Username", "type": "text",
-            "default": "StaticTrace", "placeholder": "StaticTrace",
+            "default": "", "placeholder": "your-github-username",
             "description": "Used by the GitHub Activity and Stats widgets.",
         },
         {
             "key": "weather_lat", "label": "Weather Latitude", "type": "number",
-            "default": "51.5074", "placeholder": "51.5074",
-            "description": "Decimal latitude for the Weather widget (e.g. 51.5074 = London).",
+            "default": "", "placeholder": "e.g. 51.5074",
+            "description": "Decimal latitude for the Weather widget.",
         },
         {
             "key": "weather_lon", "label": "Weather Longitude", "type": "number",
-            "default": "-0.1278", "placeholder": "-0.1278",
+            "default": "", "placeholder": "e.g. -0.1278",
             "description": "Decimal longitude for the Weather widget.",
         },
         {

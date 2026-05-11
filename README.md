@@ -149,7 +149,7 @@ Active config (what the app reads)
 
 ```bash
 # Clone
-git clone https://github.com/StaticTrace/OmniOS.git
+git clone https://github.com/your-username/your-omnios-repo.git
 cd OmniOS
 
 # Install dependencies
@@ -204,8 +204,3 @@ All settings are managed through the **Config Editor** at `/config`. You can als
 ## License
 
 MIT — free to use, fork, and self-host.
-
----
-
-Made by [@StaticTrace](https://github.com/StaticTrace)
-1
