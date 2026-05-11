@@ -5,8 +5,22 @@ from .config import IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
 from .git_manager import load_config as git_load, save_config as git_save, git_push
 from .data_registry import run_all_cleaners
 from . import config_manager as _cfg_mgr
+from . import ai_manager as _ai
+from . import log_manager as _log
+from . import snapshot_manager as _snap
 
-_DOTENV = Path(__file__).parent.parent / ".env"
+_DOTENV  = Path(__file__).parent.parent / ".env"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# ── Service → env-key map for the Connections page ───────────────────────────
+_CONN_SERVICES: dict[str, str] = {
+    "github":    "GITHUB_PAT",
+    "openai":    "OPENAI_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "google_ai": "GOOGLE_AI_KEY",
+    "youtube":   "YOUTUBE_API_KEY",
+    "custom":    "CUSTOM_AI_KEY",
+}
 
 
 def _derive_icon(url: str) -> str:
@@ -27,13 +41,18 @@ def _write_secret(key: str, value: str) -> None:
     lines: list[str] = []
     if _DOTENV.exists():
         lines = _DOTENV.read_text().splitlines()
-    # Remove any existing entry for this key
     lines = [l for l in lines if not l.startswith(f"{key}=")]
     lines.append(f"{key}={value}")
     _DOTENV.write_text("\n".join(lines) + "\n")
-    os.environ[key] = value  # available immediately in this process
+    os.environ[key] = value
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+def _delete_secret(key: str) -> None:
+    """Remove a secret from .env and clear it from the process environment."""
+    if _DOTENV.exists():
+        lines = _DOTENV.read_text().splitlines()
+        lines = [l for l in lines if not l.startswith(f"{key}=")]
+        _DOTENV.write_text("\n".join(lines) + "\n")
+    os.environ.pop(key, None)
 
 
 def register_routes(app: Flask) -> None:
@@ -83,6 +102,24 @@ def register_routes(app: Flask) -> None:
         }
         return render_template("settings.html", identity=IDENTITY, pages=PAGES, system=system)
 
+    # ── New page routes ───────────────────────────────────────────────────────
+
+    @app.route("/ai")
+    def ai_page():
+        return render_template("ai.html", identity=IDENTITY, pages=PAGES)
+
+    @app.route("/logs")
+    def logs_page():
+        return render_template("logs.html", identity=IDENTITY, pages=PAGES)
+
+    @app.route("/snapshots")
+    def snapshots_page():
+        return render_template("snapshots.html", identity=IDENTITY, pages=PAGES)
+
+    @app.route("/connections")
+    def connections_page():
+        return render_template("connections.html", identity=IDENTITY, pages=PAGES)
+
     # ── API: Identity ─────────────────────────────────────────────────────────
 
     @app.route("/api/identity")
@@ -99,12 +136,11 @@ def register_routes(app: Flask) -> None:
             return jsonify(cfg)
 
         data = request.get_json(silent=True) or {}
-        # Save non-sensitive fields to JSON config
         git_save(data)
-        # If a PAT was provided, write it to the environment file
         pat = data.get("pat", "").strip()
         if pat:
             _write_secret("GITHUB_PAT", pat)
+        _log.write_log("git", "info", "Git config updated")
         return jsonify({"ok": True})
 
     # ── API: Git push ─────────────────────────────────────────────────────────
@@ -112,6 +148,8 @@ def register_routes(app: Flask) -> None:
     @app.route("/api/git/push", methods=["POST"])
     def api_git_push():
         result = git_push()
+        level = "success" if result.get("ok") else "error"
+        _log.write_log("git", level, f"Git push: {result.get('message', '')[:120]}")
         return jsonify(result)
 
     # ── API: Data manifest ────────────────────────────────────────────────────
@@ -129,6 +167,7 @@ def register_routes(app: Flask) -> None:
         if data.get("confirm") != "DELETE":
             return jsonify({"ok": False, "error": "Confirmation phrase missing or incorrect."}), 400
         result = run_all_cleaners()
+        _log.write_log("system", "warning", "Full data wipe performed by user")
         return jsonify(result)
 
     # ── API: GitHub activity ──────────────────────────────────────────────────
@@ -211,7 +250,7 @@ def register_routes(app: Flask) -> None:
         except Exception as e:
             return jsonify({"error": str(e), "items": []})
 
-    # ── API: Email alias (stateless placeholder) ──────────────────────────────
+    # ── API: Email alias ──────────────────────────────────────────────────────
 
     @app.route("/api/alias/generate", methods=["POST"])
     def api_alias_generate():
@@ -233,7 +272,7 @@ def register_routes(app: Flask) -> None:
     EXCLUDE_DIRS = {
         ".git", ".pythonlibs", "__pycache__", ".cache", ".local",
         "node_modules", ".agents", "dist", "build", ".venv", "venv",
-        ".mypy_cache", ".pytest_cache", ".ruff_cache",
+        ".mypy_cache", ".pytest_cache", ".ruff_cache", ".omnios-snapshots",
     }
     EXCLUDE_FILES = {".DS_Store", ".env"}
     EXCLUDE_EXTS  = {".pyc", ".pyo", ".pyd"}
@@ -259,12 +298,8 @@ def register_routes(app: Flask) -> None:
                     except (OSError, PermissionError):
                         pass
         buf.seek(0)
-        return send_file(
-            buf,
-            mimetype="application/zip",
-            as_attachment=True,
-            download_name="omnios-hub.zip",
-        )
+        _log.write_log("export", "info", "Project ZIP exported")
+        return send_file(buf, mimetype="application/zip", as_attachment=True, download_name="omnios-hub.zip")
 
     # ── Config Editor page ────────────────────────────────────────────────────
 
@@ -276,10 +311,7 @@ def register_routes(app: Flask) -> None:
 
     @app.route("/api/config")
     def api_config_get():
-        return jsonify({
-            "schema": _cfg_mgr.get_schema(),
-            "active": _cfg_mgr.get_active(),
-        })
+        return jsonify({"schema": _cfg_mgr.get_schema(), "active": _cfg_mgr.get_active()})
 
     # ── API: Save config ──────────────────────────────────────────────────────
 
@@ -297,7 +329,7 @@ def register_routes(app: Flask) -> None:
         if errors:
             return jsonify({"ok": False, "errors": errors}), 400
         _cfg_mgr.save_all(data)
-        # Refresh the module-level names used by template routes
+        _log.write_log("config", "success", "Config saved via Config Editor")
         global IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
         from .config import IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
         return jsonify({"ok": True})
@@ -322,6 +354,7 @@ def register_routes(app: Flask) -> None:
     @app.route("/api/config/defaults/save", methods=["POST"])
     def api_config_defaults_save():
         _cfg_mgr.save_as_default()
+        _log.write_log("config", "success", "Active config saved as user defaults")
         global IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
         from .config import IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
         return jsonify({"ok": True, "manifest": _cfg_mgr.get_defaults_manifest()})
@@ -343,21 +376,20 @@ def register_routes(app: Flask) -> None:
             except (TypeError, ValueError):
                 return jsonify({"ok": False, "message": "Invalid list_index."}), 400
         result = _cfg_mgr.delete_from_defaults(
-            section_id=section_id,
-            field_key=field_key,
-            list_key=list_key,
-            list_index=list_index,
+            section_id=section_id, field_key=field_key,
+            list_key=list_key, list_index=list_index,
         )
         global IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
         from .config import IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
         result["manifest"] = _cfg_mgr.get_defaults_manifest()
         return jsonify(result)
 
-    # ── API: Full factory reset (wipes both config files) ─────────────────────
+    # ── API: Full factory reset ────────────────────────────────────────────────
 
     @app.route("/api/config/defaults/factory-reset", methods=["POST"])
     def api_config_factory_reset():
         _cfg_mgr.factory_reset()
+        _log.write_log("config", "warning", "Factory reset performed")
         global IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
         from .config import IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
         return jsonify({"ok": True})
@@ -444,12 +476,10 @@ def register_routes(app: Flask) -> None:
             except Exception:
                 return
             changed = False
-            # Wipe social links
             if "social_links" in data and data["social_links"].get("links"):
                 data["social_links"]["links"] = []
                 log.append(f"{label}: cleared social_links")
                 changed = True
-            # Wipe personal UI fields
             if "ui" in data:
                 for key in _PERSONAL_UI_KEYS:
                     if data["ui"].get(key):
@@ -459,13 +489,9 @@ def register_routes(app: Flask) -> None:
             if changed:
                 path.write_text(_json.dumps(data, indent=2, ensure_ascii=False))
 
-        # 1. Scrub defaults file
         _scrub_config_file(defaults_file, ".omnios-defaults.json")
+        _scrub_config_file(config_file,   ".omnios-config.json")
 
-        # 2. Scrub session overrides file
-        _scrub_config_file(config_file, ".omnios-config.json")
-
-        # 3. Wipe git config
         if git_cfg_file.exists():
             try:
                 cfg = _json.loads(git_cfg_file.read_text())
@@ -475,7 +501,6 @@ def register_routes(app: Flask) -> None:
             except Exception:
                 pass
 
-        # 4. Wipe .env secrets
         if env_file.exists():
             env_file.unlink()
             log.append(".env: deleted (secrets removed)")
@@ -484,7 +509,6 @@ def register_routes(app: Flask) -> None:
                 del os.environ[key]
                 log.append(f"Process env: cleared {key}")
 
-        # 5. Reload live app state
         try:
             from . import config_manager as _cm
             _cm._reload_into_app()
@@ -492,10 +516,125 @@ def register_routes(app: Flask) -> None:
         except Exception as exc:
             log.append(f"Reload warning: {exc}")
 
+        _log.write_log("system", "warning", "Personal data scrub run by user")
+
         if not log:
             log.append("No personal data found — system is already clean.")
 
         return jsonify({"ok": True, "log": log})
+
+    # ── API: AI config ────────────────────────────────────────────────────────
+
+    @app.route("/api/ai/config", methods=["GET"])
+    def api_ai_config_get():
+        return jsonify({
+            "config":    _ai.get_ai_config(),
+            "providers": _ai.get_provider_info(),
+        })
+
+    @app.route("/api/ai/config", methods=["POST"])
+    def api_ai_config_save():
+        data = request.get_json(silent=True) or {}
+        _ai.save_ai_config(data)
+        provider = data.get("provider", "")
+        model    = data.get("model", "")
+        _log.write_log("ai", "info", f"AI config updated — provider={provider}, model={model}")
+        return jsonify({"ok": True})
+
+    # ── API: AI chat ──────────────────────────────────────────────────────────
+
+    @app.route("/api/ai/chat", methods=["POST"])
+    def api_ai_chat():
+        payload  = request.get_json(silent=True) or {}
+        messages = payload.get("messages", [])
+        if not messages:
+            return jsonify({"ok": False, "error": "No messages provided."}), 400
+        result = _ai.chat(messages)
+        if not result.get("ok"):
+            _log.write_log("ai", "error", f"Chat failed: {result.get('error', '')[:120]}")
+        return jsonify(result)
+
+    # ── API: Logs ─────────────────────────────────────────────────────────────
+
+    @app.route("/api/logs")
+    def api_logs():
+        category = request.args.get("category", "all")
+        level    = request.args.get("level",    "all")
+        search   = request.args.get("search",   "").strip()
+        limit    = int(request.args.get("limit", 300))
+        entries  = _log.get_logs(
+            category=category if category != "all" else None,
+            level=level       if level    != "all" else None,
+            search=search     or None,
+            limit=min(limit, 500),
+        )
+        return jsonify({"entries": entries})
+
+    @app.route("/api/logs/stats")
+    def api_logs_stats():
+        return jsonify(_log.get_stats())
+
+    @app.route("/api/logs/clear", methods=["POST"])
+    def api_logs_clear():
+        _log.clear_logs()
+        return jsonify({"ok": True})
+
+    # ── API: Snapshots ────────────────────────────────────────────────────────
+
+    @app.route("/api/snapshots", methods=["GET"])
+    def api_snapshots_list():
+        return jsonify({"snapshots": _snap.list_snapshots()})
+
+    @app.route("/api/snapshots", methods=["POST"])
+    def api_snapshots_create():
+        data  = request.get_json(silent=True) or {}
+        label = data.get("label", "").strip()
+        snap  = _snap.create_snapshot(label)
+        return jsonify({"ok": True, "snapshot": snap})
+
+    @app.route("/api/snapshots/<snap_id>/restore", methods=["POST"])
+    def api_snapshot_restore(snap_id: str):
+        result = _snap.restore_snapshot(snap_id)
+        if result.get("ok"):
+            global IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
+            from .config import IDENTITY, SOCIAL_LINKS, PAGES, NOTIFICATION_SOURCES
+        return jsonify(result)
+
+    @app.route("/api/snapshots/<snap_id>", methods=["DELETE"])
+    def api_snapshot_delete(snap_id: str):
+        return jsonify(_snap.delete_snapshot(snap_id))
+
+    # ── API: Connections (service API keys) ───────────────────────────────────
+
+    @app.route("/api/connections", methods=["GET"])
+    def api_connections_get():
+        connections = {}
+        for svc_id, env_key in _CONN_SERVICES.items():
+            connections[svc_id] = {"set": bool(os.environ.get(env_key, "").strip())}
+        return jsonify({"connections": connections})
+
+    @app.route("/api/connections", methods=["POST"])
+    def api_connections_save():
+        data    = request.get_json(silent=True) or {}
+        svc_id  = data.get("service", "").strip()
+        key_val = data.get("key", "").strip()
+        if not svc_id or svc_id not in _CONN_SERVICES:
+            return jsonify({"ok": False, "error": "Unknown service."}), 400
+        if not key_val:
+            return jsonify({"ok": False, "error": "Key value cannot be empty."}), 400
+        env_key = _CONN_SERVICES[svc_id]
+        _write_secret(env_key, key_val)
+        _log.write_log("connections", "success", f"API key saved for: {svc_id}")
+        return jsonify({"ok": True})
+
+    @app.route("/api/connections/<svc_id>", methods=["DELETE"])
+    def api_connections_delete(svc_id: str):
+        if svc_id not in _CONN_SERVICES:
+            return jsonify({"ok": False, "error": "Unknown service."}), 400
+        env_key = _CONN_SERVICES[svc_id]
+        _delete_secret(env_key)
+        _log.write_log("connections", "info", f"API key cleared for: {svc_id}")
+        return jsonify({"ok": True})
 
     # ── Favicon ───────────────────────────────────────────────────────────────
 

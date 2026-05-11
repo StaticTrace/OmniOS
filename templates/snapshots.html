@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+{% block title %}Snapshots — OmniOS{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div>
+    <div class="topbar-title">Snapshots</div>
+    <div class="topbar-subtitle">Config version control — capture and restore any state</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.snap-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .snap-layout { grid-template-columns: 1fr; }
+}
+.snap-item {
+  display: flex; align-items: flex-start; gap: 0.9rem;
+  padding: 0.9rem 1.1rem;
+  border-bottom: 1px solid var(--border-soft);
+  transition: background var(--transition);
+}
+.snap-item:last-child { border-bottom: none; }
+.snap-item:hover { background: var(--bg-elevated); }
+.snap-dot-col { display: flex; flex-direction: column; align-items: center; gap: 0; padding-top: 3px; }
+.snap-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+.snap-line { width: 2px; flex: 1; background: var(--border-soft); min-height: 24px; margin-top: 3px; }
+.snap-body { flex: 1; min-width: 0; }
+.snap-label { font-size: 0.88rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.snap-meta  { font-size: 0.72rem; color: var(--text-muted); display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.snap-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+.file-count-pill {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 1px 7px; border-radius: 99px;
+  font-size: 0.65rem; font-weight: 600;
+  background: var(--bg-elevated); color: var(--text-muted);
+  border: 1px solid var(--border-soft);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="snap-layout">
+
+  <!-- Left: Create snapshot -->
+  <div style="display:flex;flex-direction:column;gap:0.85rem;position:sticky;top:1rem;">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:0.85rem;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        Create Snapshot
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.75rem;">
+        <div>
+          <label style="font-size:0.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:.35rem;">Label (optional)</label>
+          <input type="text" id="snap-label" placeholder="e.g. Before social config update…" style="font-size:0.82rem;" />
+        </div>
+        <button class="btn btn-primary" id="create-snap-btn" style="width:100%;justify-content:center;font-size:0.82rem;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          Capture Snapshot
+        </button>
+      </div>
+    </div>
+
+    <!-- Info card -->
+    <div class="card" style="padding:1rem;">
+      <div style="display:flex;flex-direction:column;gap:0.5rem;font-size:0.78rem;color:var(--text-secondary);line-height:1.6;">
+        <div style="display:flex;gap:0.5rem;align-items:flex-start;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" style="flex-shrink:0;margin-top:2px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Snapshots capture all OmniOS config files.
+        </div>
+        <div style="display:flex;gap:0.5rem;align-items:flex-start;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" style="flex-shrink:0;margin-top:2px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Restoring automatically creates a safety backup first.
+        </div>
+        <div style="display:flex;gap:0.5rem;align-items:flex-start;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" style="flex-shrink:0;margin-top:2px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Up to 50 snapshots are kept. Oldest are auto-pruned.
+        </div>
+        <div style="display:flex;gap:0.5rem;align-items:flex-start;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" style="flex-shrink:0;margin-top:2px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          API keys are not included in snapshots.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Snapshot list -->
+  <div>
+    <div class="card" style="padding:0;overflow:hidden;" id="snaps-card">
+      <div id="snaps-list">
+        <div style="padding:2.5rem;text-align:center;color:var(--text-muted);font-size:0.85rem;">Loading snapshots…</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Restore Confirm Modal -->
+<div class="modal-backdrop" id="restore-modal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+        Restore Snapshot?
+      </div>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1.25rem;">
+      Restoring <strong id="restore-label-txt" style="color:var(--text-primary);"></strong> will overwrite your current config files.
+      A safety backup snapshot is created automatically before any files are changed.
+    </p>
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+      <button class="btn btn-ghost" id="cancel-restore-btn">Cancel</button>
+      <button class="btn" id="confirm-restore-btn" style="background:var(--warning);color:#000;border-color:var(--warning);font-weight:600;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+        Restore
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-backdrop" id="delete-snap-modal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--danger);">Delete Snapshot?</div>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1.25rem;">
+      This will permanently delete <strong id="delete-label-txt" style="color:var(--text-primary);"></strong>. This cannot be undone.
+    </p>
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+      <button class="btn btn-ghost" id="cancel-delete-snap-btn">Cancel</button>
+      <button class="btn btn-danger" id="confirm-delete-snap-btn" style="font-weight:600;">Delete</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+import { apiFetch, toast } from '/static/js/core/os.js';
+
+let _snapshots  = [];
+let _restoreId  = null;
+let _deleteId   = null;
+
+const SVG_RESTORE = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>`;
+const SVG_TRASH   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>`;
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString([], { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  } catch { return iso; }
+}
+
+function renderSnaps() {
+  const el = document.getElementById('snaps-list');
+  if (!_snapshots.length) {
+    el.innerHTML = `<div style="padding:3rem;text-align:center;color:var(--text-muted);font-size:0.85rem;">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity:.25;display:block;margin:0 auto 0.75rem;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      No snapshots yet. Create your first one using the panel on the left.
+    </div>`;
+    return;
+  }
+  el.innerHTML = '';
+  _snapshots.forEach((snap, i) => {
+    const isLast = i === _snapshots.length - 1;
+    const row = document.createElement('div');
+    row.className = 'snap-item';
+    row.innerHTML = `
+      <div class="snap-dot-col">
+        <div class="snap-dot"></div>
+        ${isLast ? '' : '<div class="snap-line"></div>'}
+      </div>
+      <div class="snap-body">
+        <div class="snap-label" title="${escHtml(snap.label)}">${escHtml(snap.label)}</div>
+        <div class="snap-meta">
+          <span>${fmtDate(snap.created_at)}</span>
+          <span class="file-count-pill">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+            ${snap.file_count} file${snap.file_count !== 1 ? 's' : ''}
+          </span>
+        </div>
+      </div>
+      <div class="snap-actions">
+        <button class="btn btn-ghost restore-btn" data-id="${snap.id}" data-label="${escHtml(snap.label)}"
+          style="font-size:0.75rem;padding:0.35rem 0.6rem;gap:0.3rem;"
+          title="Restore this snapshot">
+          ${SVG_RESTORE} Restore
+        </button>
+        <button class="btn-icon del-btn" data-id="${snap.id}" data-label="${escHtml(snap.label)}"
+          title="Delete snapshot"
+          style="color:var(--text-muted);">
+          ${SVG_TRASH}
+        </button>
+      </div>
+    `;
+    el.appendChild(row);
+  });
+
+  el.querySelectorAll('.restore-btn').forEach(btn => btn.addEventListener('click', () => {
+    _restoreId = btn.dataset.id;
+    document.getElementById('restore-label-txt').textContent = btn.dataset.label;
+    document.getElementById('restore-modal').classList.add('open');
+  }));
+  el.querySelectorAll('.del-btn').forEach(btn => btn.addEventListener('click', () => {
+    _deleteId = btn.dataset.id;
+    document.getElementById('delete-label-txt').textContent = btn.dataset.label;
+    document.getElementById('delete-snap-modal').classList.add('open');
+  }));
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function loadSnaps() {
+  try {
+    const d = await apiFetch('/api/snapshots');
+    _snapshots = d.snapshots || [];
+    renderSnaps();
+  } catch(e) {
+    document.getElementById('snaps-list').innerHTML =
+      `<div style="padding:2rem;text-align:center;color:var(--danger);font-size:0.82rem;">Failed to load: ${e.message}</div>`;
+  }
+}
+
+// ── Create snapshot ───────────────────────────────────────────────────────────
+document.getElementById('create-snap-btn').addEventListener('click', async () => {
+  const btn   = document.getElementById('create-snap-btn');
+  const label = document.getElementById('snap-label').value.trim();
+  btn.disabled = true;
+  btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Capturing…`;
+  try {
+    const d = await apiFetch('/api/snapshots', { method: 'POST', body: JSON.stringify({ label }) });
+    if (d.ok) {
+      document.getElementById('snap-label').value = '';
+      toast(`Snapshot created: ${d.snapshot.label}`, 'success');
+      await loadSnaps();
+    } else { toast(d.error || 'Failed', 'error'); }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+  finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg> Capture Snapshot`;
+  }
+});
+
+// ── Restore ───────────────────────────────────────────────────────────────────
+document.getElementById('cancel-restore-btn').addEventListener('click', () => {
+  document.getElementById('restore-modal').classList.remove('open');
+});
+document.getElementById('restore-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+});
+document.getElementById('confirm-restore-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('confirm-restore-btn');
+  btn.disabled = true; btn.textContent = 'Restoring…';
+  try {
+    const d = await apiFetch(`/api/snapshots/${_restoreId}/restore`, { method: 'POST' });
+    if (d.ok) {
+      toast(`Restored: ${d.label}`, 'success');
+      document.getElementById('restore-modal').classList.remove('open');
+      await loadSnaps();
+    } else { toast(d.error || 'Restore failed', 'error'); }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+  finally {
+    btn.disabled = false;
+    btn.innerHTML = `${SVG_RESTORE} Restore`;
+  }
+});
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+document.getElementById('cancel-delete-snap-btn').addEventListener('click', () => {
+  document.getElementById('delete-snap-modal').classList.remove('open');
+});
+document.getElementById('delete-snap-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+});
+document.getElementById('confirm-delete-snap-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('confirm-delete-snap-btn');
+  btn.disabled = true; btn.textContent = 'Deleting…';
+  try {
+    const d = await apiFetch(`/api/snapshots/${_deleteId}`, { method: 'DELETE' });
+    if (d.ok) {
+      toast('Snapshot deleted.', 'info');
+      document.getElementById('delete-snap-modal').classList.remove('open');
+      await loadSnaps();
+    } else { toast(d.error || 'Delete failed', 'error'); }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'Delete'; }
+});
+
+loadSnaps();
+</script>
+<style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+{% endblock %}

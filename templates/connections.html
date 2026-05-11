@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% block title %}Connections — OmniOS{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div>
+    <div class="topbar-title">Connections</div>
+    <div class="topbar-subtitle">Manage API keys and service credentials</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.conn-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  position: relative;
+}
+.conn-icon {
+  width: 44px; height: 44px;
+  border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.conn-header { display: flex; align-items: center; gap: 0.9rem; }
+.conn-name   { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); }
+.conn-desc   { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem; line-height: 1.5; }
+.status-dot  {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  font-size: 0.72rem; font-weight: 600;
+  padding: 0.2rem 0.6rem; border-radius: 99px;
+}
+.status-dot.set   { background: rgba(52,211,153,0.15); color: var(--success); }
+.status-dot.unset { background: var(--bg-elevated); color: var(--text-muted); border: 1px solid var(--border-soft); }
+.status-dot svg   { width: 7px; height: 7px; border-radius: 50%; }
+.key-input-wrap {
+  display: flex; gap: 0.5rem;
+}
+.key-input-wrap input { font-family: var(--font-mono); font-size: 0.8rem; }
+.section-label {
+  font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--text-muted);
+  margin-bottom: 0.5rem; margin-top: 0.25rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;">
+
+  <div style="margin-bottom:1rem;">
+    <div class="section-label">Developer</div>
+    <div class="grid-auto" id="dev-grid"></div>
+  </div>
+
+  <div style="margin-bottom:1rem;">
+    <div class="section-label">AI Providers</div>
+    <div class="grid-auto" id="ai-grid"></div>
+  </div>
+
+  <div>
+    <div class="section-label">Media &amp; Data</div>
+    <div class="grid-auto" id="media-grid"></div>
+  </div>
+
+</div>
+
+<!-- Configure Key Modal -->
+<div class="modal-backdrop" id="key-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="key-modal-title">Configure Key</div>
+      <button class="btn-icon" id="close-key-modal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+      <div id="key-modal-desc" style="font-size:0.8rem;color:var(--text-secondary);line-height:1.6;"></div>
+      <div id="key-modal-status" style="font-size:0.75rem;"></div>
+      <div>
+        <label class="field-label" style="font-size:0.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:.4rem;">API Key</label>
+        <div class="key-input-wrap">
+          <input type="password" id="key-input" placeholder="Paste your API key here…" autocomplete="off" />
+          <button class="btn-icon" id="toggle-key-vis" title="Show/hide key" style="flex-shrink:0;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div style="display:flex;gap:0.6rem;justify-content:flex-end;flex-wrap:wrap;">
+        <button class="btn btn-danger" id="clear-key-btn" style="font-size:0.8rem;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          Clear Key
+        </button>
+        <button class="btn btn-ghost" id="cancel-key-modal">Cancel</button>
+        <button class="btn btn-primary" id="save-key-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save Key
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+import { apiFetch, toast } from '/static/js/core/os.js';
+
+const SERVICES = [
+  {
+    id: 'github', label: 'GitHub', category: 'dev',
+    desc: 'Personal Access Token for git push and GitHub API access.',
+    env_key: 'GITHUB_PAT', placeholder: 'ghp_xxxxxxxxxxxx',
+    color: '#333,#555',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>`,
+  },
+  {
+    id: 'openai', label: 'OpenAI', category: 'ai',
+    desc: 'API key for GPT-4o and other OpenAI models used by the AI Assistant.',
+    env_key: 'OPENAI_API_KEY', placeholder: 'sk-...',
+    color: '#10a37f,#0d8a6b',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0L4.0555 13.3892a4.4992 4.4992 0 0 1-1.7147-5.4936zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.4947 2.5924a4.4967 4.4967 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.4947-2.5924a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4998-2.6067-1.4998Z"/></svg>`,
+  },
+  {
+    id: 'anthropic', label: 'Anthropic', category: 'ai',
+    desc: 'API key for Claude models (Claude Opus, Sonnet, Haiku) in the AI Assistant.',
+    env_key: 'ANTHROPIC_API_KEY', placeholder: 'sk-ant-...',
+    color: '#cd8d5a,#b8763f',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M17.304 3.541H13.69L9 11.57l2.498 4.403L17.304 3.541zM13.452 20.459l2.498-4.428-2.498-4.402-2.498 4.402 2.498 4.428zM6.696 3.541l-4.59 8.03 2.498 4.428 4.59-8.056L6.696 3.541z"/></svg>`,
+  },
+  {
+    id: 'google_ai', label: 'Google Gemini', category: 'ai',
+    desc: 'API key for Gemini models (gemini-2.0-flash, gemini-1.5-pro) in AI Assistant.',
+    env_key: 'GOOGLE_AI_KEY', placeholder: 'AIza...',
+    color: '#4285f4,#2e6cdc',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm-1-4.5V16h2v-0.5A4 4 0 0 0 16 11.5V11a4 4 0 0 0-8 0v0.5a4 4 0 0 0 3 3.873V15.5zM12 9a2 2 0 0 1 2 2v0.5a2 2 0 0 1-4 0V11a2 2 0 0 1 2-2z"/></svg>`,
+  },
+  {
+    id: 'youtube', label: 'YouTube Data API', category: 'media',
+    desc: 'API key for fetching YouTube channel stats, video data, and subscriber counts.',
+    env_key: 'YOUTUBE_API_KEY', placeholder: 'AIza...',
+    color: '#ff0000,#cc0000',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="#ff0000"/></svg>`,
+  },
+];
+
+let _connections = {};
+let _activeService = null;
+
+// ── Load connections ──────────────────────────────────────────────────────────
+async function loadConnections() {
+  try {
+    const d = await apiFetch('/api/connections');
+    _connections = d.connections || {};
+    renderAll();
+  } catch (e) {
+    toast('Failed to load connections: ' + e.message, 'error');
+  }
+}
+
+function renderAll() {
+  renderGroup('dev-grid',   SERVICES.filter(s => s.category === 'dev'));
+  renderGroup('ai-grid',    SERVICES.filter(s => s.category === 'ai'));
+  renderGroup('media-grid', SERVICES.filter(s => s.category === 'media'));
+}
+
+function renderGroup(gridId, services) {
+  const grid = document.getElementById(gridId);
+  grid.innerHTML = '';
+  services.forEach(svc => {
+    const isSet = _connections[svc.id]?.set || false;
+    const card = document.createElement('div');
+    card.className = 'card conn-card';
+    card.innerHTML = `
+      <div class="conn-header">
+        <div class="conn-icon" style="background:linear-gradient(135deg,${svc.color});">${svc.icon}</div>
+        <div>
+          <div class="conn-name">${svc.label}</div>
+          <div>
+            ${isSet
+              ? `<span class="status-dot set"><svg viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="var(--success)"/></svg> Connected</span>`
+              : `<span class="status-dot unset"><svg viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="var(--text-muted)"/></svg> Not configured</span>`
+            }
+          </div>
+        </div>
+      </div>
+      <div class="conn-desc">${svc.desc}</div>
+      <button class="btn ${isSet ? 'btn-ghost' : 'btn-primary'} configure-btn" data-id="${svc.id}" style="font-size:0.78rem;width:100%;justify-content:center;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        ${isSet ? 'Update Key' : 'Add Key'}
+      </button>
+    `;
+    card.querySelector('.configure-btn').addEventListener('click', () => openKeyModal(svc.id));
+    grid.appendChild(card);
+  });
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openKeyModal(serviceId) {
+  const svc = SERVICES.find(s => s.id === serviceId);
+  if (!svc) return;
+  _activeService = serviceId;
+  const isSet = _connections[serviceId]?.set || false;
+
+  document.getElementById('key-modal-title').textContent = `Configure — ${svc.label}`;
+  document.getElementById('key-modal-desc').textContent  = svc.desc;
+  document.getElementById('key-modal-status').innerHTML  = isSet
+    ? `<span style="color:var(--success);">✓ Key currently set</span> — paste a new key below to update it`
+    : `<span style="color:var(--text-muted);">No key configured yet.</span> Paste your API key below.`;
+  document.getElementById('key-input').value       = '';
+  document.getElementById('key-input').placeholder = svc.placeholder;
+  document.getElementById('clear-key-btn').style.display = isSet ? '' : 'none';
+  document.getElementById('key-modal').classList.add('open');
+  setTimeout(() => document.getElementById('key-input').focus(), 80);
+}
+
+function closeModal() {
+  document.getElementById('key-modal').classList.remove('open');
+  document.getElementById('key-input').value = '';
+  _activeService = null;
+}
+
+document.getElementById('close-key-modal').addEventListener('click', closeModal);
+document.getElementById('cancel-key-modal').addEventListener('click', closeModal);
+document.getElementById('key-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+document.getElementById('toggle-key-vis').addEventListener('click', () => {
+  const inp = document.getElementById('key-input');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+});
+
+// ── Save key ──────────────────────────────────────────────────────────────────
+document.getElementById('save-key-btn').addEventListener('click', async () => {
+  const key = document.getElementById('key-input').value.trim();
+  if (!key) { toast('Please enter a key', 'error'); return; }
+  const btn = document.getElementById('save-key-btn');
+  btn.disabled = true;
+  try {
+    const d = await apiFetch('/api/connections', {
+      method: 'POST',
+      body: JSON.stringify({ service: _activeService, key }),
+    });
+    if (d.ok) {
+      _connections[_activeService] = { set: true };
+      toast('Key saved successfully!', 'success');
+      closeModal();
+      renderAll();
+    } else {
+      toast(d.error || 'Failed to save', 'error');
+    }
+  } catch (e) {
+    toast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// ── Clear key ─────────────────────────────────────────────────────────────────
+document.getElementById('clear-key-btn').addEventListener('click', async () => {
+  if (!_activeService) return;
+  const btn = document.getElementById('clear-key-btn');
+  btn.disabled = true;
+  try {
+    const d = await apiFetch(`/api/connections/${_activeService}`, { method: 'DELETE' });
+    if (d.ok) {
+      _connections[_activeService] = { set: false };
+      toast('Key cleared.', 'info');
+      closeModal();
+      renderAll();
+    } else {
+      toast(d.error || 'Failed to clear', 'error');
+    }
+  } catch (e) {
+    toast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+loadConnections();
+</script>
+{% endblock %}

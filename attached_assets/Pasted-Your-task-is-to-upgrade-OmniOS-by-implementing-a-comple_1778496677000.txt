@@ -1,0 +1,329 @@
+Your task is to upgrade OmniOS by implementing a complete, unified system with the following capabilities.
+Follow all instructions precisely and apply changes across the entire codebase.
+
+1. Browser Compatibility
+Implement full compatibility across all major browsers:
+
+Chrome
+
+Edge
+
+Firefox
+
+Safari
+
+Brave
+
+Puffin
+
+Opera
+
+All modern mobile browsers
+
+Ensure consistent rendering, layout, performance, and feature support.
+Implement fallbacks for unsupported browser features.
+
+2. GitHub Integration
+Implement:
+
+Deploy to GitHub Pages
+
+Sync/copy the entire OmniOS project into a GitHub repository
+
+Include all files, modules, assets, configs, and hidden files
+
+Exclude only node_modules and build artifacts
+
+3. Desktop App Packaging
+Add a system to export OmniOS as a desktop application:
+
+Windows
+
+macOS
+
+Linux
+
+Use Electron or equivalent packaging.
+
+4. Full AI Editing Capabilities
+Implement an internal AI agent with full access to:
+
+Entire codebase
+
+All files and folders
+
+All images and assets
+
+All modules and configs
+
+The AI must be able to:
+
+Edit, modify, and customize the entire project
+
+Create, delete, rename, and update files
+
+Refactor, debug, optimize, and restructure code
+
+Generate new modules and features
+
+5. AI Provider / Model Selection
+Add a system where the user can:
+
+Choose AI provider (OpenAI, Anthropic, Google, Local models, Custom API)
+
+Choose model
+
+Enter API keys
+
+Customize AI behavior, personality, and rules
+
+Store all keys securely.
+
+6. Usage Tracking & Limits
+Implement a dashboard showing:
+
+Rate Limit
+
+Usage Cap
+
+Daily Limit
+
+Message Limit
+
+Quota Exceeded
+
+Token Limit
+
+Fair Use Limit
+
+Request Throttled
+
+Over Capacity
+
+Session Limit
+
+Include warnings, color indicators, and real‑time updates.
+
+7. User‑Customizable AI
+Allow the user to configure:
+
+AI personality
+
+Behavior rules
+
+Editing permissions
+
+Safety boundaries
+
+Access level (read‑only, partial, full)
+
+8. Logging System
+Implement logs for:
+
+AI actions
+
+File changes
+
+Errors
+
+Usage
+
+System events
+
+Deployments
+
+GitHub pushes
+
+Add a Logs Viewer UI.
+
+9. Version Control & Rollback
+Implement:
+
+Automatic version snapshots
+
+Diff previews before applying changes
+
+One‑click rollback to any previous version
+
+10. Permission System for AI Editing
+Add:
+
+User confirmation before destructive actions
+
+Permission levels
+
+Safe mode vs full control mode
+
+11. API Key Security
+Implement:
+
+Secure encrypted storage
+
+Automatic redaction in logs
+
+Never expose keys in UI or output
+
+12. UI / Dashboard Requirements
+Create a unified interface containing:
+
+Settings panel
+
+Usage dashboard
+
+Logs viewer
+
+AI configuration panel
+
+Deployment panel
+
+Browser compatibility panel
+
+Service integration panel
+
+13. Additional Deployment Options
+Add:
+
+Local export
+
+Static site export
+
+Optional hooks for cloud deployment (Netlify, Vercel, Cloudflare Pages)
+
+14. Error Handling & Recovery
+Implement:
+
+AI error reporting
+
+System error logs
+
+Graceful fallback behavior
+
+Recovery suggestions
+
+15. Testing & Validation
+Before saving changes:
+
+Validate code
+
+Run linting/formatting
+
+Detect build errors
+
+Prevent broken saves
+
+16. AI Agent Behavior Rules
+The AI must:
+
+Explain changes before applying them
+
+Ask for clarification when needed
+
+Avoid destructive actions unless confirmed
+
+Follow user‑defined rules and permissions
+
+17. Internet Access Layer
+Implement a secure internet access system:
+
+Support GET, POST, PUT, DELETE
+
+Fetch external APIs, JSON, text, images, metadata
+
+Handle rate limits, invalid responses, timeouts
+
+Allow user‑configured endpoints, headers, keys
+
+Enforce permissions and security rules
+
+Provide a clean interface for AI to request external data
+
+18. Browser Integration Layer
+Implement:
+
+Browser detection
+
+Feature detection
+
+Compatibility layer
+
+Support for localStorage, cookies, sessionStorage, service workers
+
+Optional hooks for browser extensions
+
+Consistent behavior across engines and devices
+
+19. Social & Service Integration Layer
+Implement a unified system for connecting external services:
+
+Facebook
+
+Instagram
+
+LINE
+
+Telegram
+
+YouTube
+
+GitHub
+
+Gmail
+
+Reddit
+
+Crypto wallets
+
+PayPal
+
+Patreon
+
+BuyMeACoffee
+
+Any other supported API
+
+Requirements:
+
+OAuth2 or API key authentication
+
+Secure token storage
+
+Manage connected accounts
+
+Standardized interface for AI to fetch/post data
+
+Error handling for invalid tokens, expired sessions, rate limits, permission errors
+
+Enforce user‑granted permissions
+
+20. Missing Features to Add (Previously Forgotten)
+Include the following additional systems:
+
+Full project consistency pass (naming, structure, formatting, architecture)
+
+Default configuration manager
+
+Save As Default
+
+Delete From Defaults
+
+Factory Reset system
+
+Personal Data Scrubber
+
+Module‑level CRUD consistency
+
+Unified design system for UI components
+
+Automatic README.md generator
+
+AI‑assisted documentation updates
+
+Full filesystem access layer for AI
+
+Module registry for future expansion
+
+Final Requirement
+Apply all changes across the entire OmniOS codebase.
+Ensure everything is modular, secure, consistent, and fully integrated.
+
+Produce the complete upgraded system as specified above.

@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% block title %}System Logs — OmniOS{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div>
+    <div class="topbar-title">System Logs</div>
+    <div class="topbar-subtitle">Structured activity log for all OmniOS modules</div>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn btn-ghost" id="refresh-logs-btn" style="font-size:0.78rem;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Refresh
+    </button>
+    <button class="btn btn-danger" id="clear-logs-btn" style="font-size:0.78rem;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      Clear Logs
+    </button>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.logs-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+@media (max-width: 720px) {
+  .logs-layout { grid-template-columns: 1fr; }
+}
+.filter-group { display: flex; flex-direction: column; gap: 0.35rem; }
+.filter-label {
+  font-size: 0.65rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--text-muted); padding: 0 0.25rem;
+}
+.filter-btn {
+  display: flex; align-items: center; gap: 0.5rem; justify-content: space-between;
+  padding: 0.45rem 0.65rem; border-radius: var(--radius-sm);
+  font-size: 0.8rem; color: var(--text-secondary);
+  background: none; border: none; cursor: pointer; text-align: left; width: 100%;
+  transition: all var(--transition);
+}
+.filter-btn:hover  { background: var(--bg-elevated); color: var(--text-primary); }
+.filter-btn.active { background: var(--accent-glow); color: var(--accent-text); }
+.filter-count {
+  font-size: 0.65rem; font-weight: 700;
+  background: var(--bg-elevated); border-radius: 99px;
+  padding: 1px 6px; color: var(--text-muted); min-width: 20px; text-align: center;
+}
+.filter-btn.active .filter-count { background: rgba(124,106,247,.3); color: var(--accent-text); }
+.log-entry {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex; align-items: flex-start; gap: 0.75rem;
+  font-size: 0.8rem; line-height: 1.5;
+  transition: background var(--transition);
+}
+.log-entry:last-child { border-bottom: none; }
+.log-entry:hover { background: var(--bg-elevated); }
+.log-time { font-size: 0.68rem; color: var(--text-muted); white-space: nowrap; min-width: 130px; font-family: var(--font-mono); }
+.log-badge {
+  display: inline-flex; align-items: center;
+  padding: 1px 7px; border-radius: 99px; font-size: 0.65rem; font-weight: 700;
+  white-space: nowrap; text-transform: uppercase; letter-spacing: 0.04em; min-width: 52px; justify-content: center;
+}
+.badge-info    { background: rgba(96,165,250,.15); color: #60a5fa; }
+.badge-success { background: rgba(52,211,153,.15);  color: var(--success); }
+.badge-warning { background: rgba(251,191,36,.15);  color: var(--warning); }
+.badge-error   { background: rgba(248,113,113,.15); color: var(--danger); }
+.badge-debug   { background: var(--bg-elevated); color: var(--text-muted); }
+.cat-badge {
+  display: inline-flex; align-items: center;
+  padding: 1px 7px; border-radius: 99px;
+  font-size: 0.65rem; font-weight: 600;
+  background: var(--accent-glow); color: var(--accent-text);
+  white-space: nowrap; min-width: 52px; justify-content: center;
+}
+.log-message { color: var(--text-secondary); flex: 1; word-break: break-word; }
+.stats-bar {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem; margin-bottom: 1.25rem;
+}
+.stat-mini {
+  background: var(--bg-surface); border: 1px solid var(--border-soft);
+  border-radius: var(--radius); padding: 0.85rem 1rem;
+  display: flex; flex-direction: column; gap: 0.2rem;
+}
+.stat-mini .n { font-size: 1.3rem; font-weight: 700; }
+.stat-mini .l { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Stats bar -->
+<div class="stats-bar" id="stats-bar">
+  <div class="stat-mini"><div class="n" id="stat-total">—</div><div class="l">Total Entries</div></div>
+  <div class="stat-mini"><div class="n" style="color:var(--danger)" id="stat-errors">—</div><div class="l">Errors</div></div>
+  <div class="stat-mini"><div class="n" style="color:var(--warning)" id="stat-warnings">—</div><div class="l">Warnings</div></div>
+  <div class="stat-mini"><div class="n" style="color:var(--success)" id="stat-success">—</div><div class="l">Success</div></div>
+</div>
+
+<div class="logs-layout">
+  <!-- Left: filters -->
+  <div style="display:flex;flex-direction:column;gap:1rem;position:sticky;top:1rem;">
+    <!-- Search -->
+    <div class="card" style="padding:0.875rem;">
+      <input type="text" id="search-input" placeholder="Search logs…" style="font-size:0.8rem;" />
+    </div>
+
+    <!-- Category filter -->
+    <div class="card" style="padding:0.875rem;">
+      <div class="filter-label" style="margin-bottom:0.5rem;">Category</div>
+      <div class="filter-group" id="cat-filters"></div>
+    </div>
+
+    <!-- Level filter -->
+    <div class="card" style="padding:0.875rem;">
+      <div class="filter-label" style="margin-bottom:0.5rem;">Level</div>
+      <div class="filter-group" id="level-filters"></div>
+    </div>
+  </div>
+
+  <!-- Right: log entries -->
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div id="log-entries" style="max-height:70vh;overflow-y:auto;">
+      <div style="padding:2rem;text-align:center;color:var(--text-muted);font-size:0.85rem;">Loading logs…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Clear Modal -->
+<div class="modal-backdrop" id="clear-confirm-modal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--danger);">Clear All Logs?</div>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1.25rem;">
+      This will permanently delete all log entries. A single housekeeping entry will be written after clearing.
+    </p>
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+      <button class="btn btn-ghost" id="cancel-clear-btn">Cancel</button>
+      <button class="btn btn-danger" id="confirm-clear-btn" style="font-weight:600;">Clear All</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+import { apiFetch, toast } from '/static/js/core/os.js';
+
+const CATEGORIES = ['all','system','ai','config','git','connections','export','user','error'];
+const LEVELS      = ['all','info','success','warning','error','debug'];
+const CAT_LABELS  = { all:'All', system:'System', ai:'AI', config:'Config', git:'Git', connections:'Connections', export:'Export', user:'User', error:'Error' };
+const LEVEL_LABELS= { all:'All', info:'Info', success:'Success', warning:'Warning', error:'Error', debug:'Debug' };
+
+let _category = 'all', _level = 'all', _search = '';
+let _stats = { by_category: {}, by_level: {} };
+
+// ── Build filter sidebars ─────────────────────────────────────────────────────
+function buildFilters() {
+  const catEl = document.getElementById('cat-filters');
+  catEl.innerHTML = '';
+  CATEGORIES.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn' + (c === _category ? ' active' : '');
+    btn.dataset.cat = c;
+    const cnt = c === 'all' ? (_stats.total || 0) : (_stats.by_category?.[c] || 0);
+    btn.innerHTML = `<span>${CAT_LABELS[c]}</span><span class="filter-count">${cnt}</span>`;
+    btn.addEventListener('click', () => { _category = c; buildFilters(); loadLogs(); });
+    catEl.appendChild(btn);
+  });
+
+  const lvlEl = document.getElementById('level-filters');
+  lvlEl.innerHTML = '';
+  LEVELS.forEach(l => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn' + (l === _level ? ' active' : '');
+    btn.dataset.lvl = l;
+    const cnt = l === 'all' ? (_stats.total || 0) : (_stats.by_level?.[l] || 0);
+    btn.innerHTML = `<span>${LEVEL_LABELS[l]}</span><span class="filter-count">${cnt}</span>`;
+    btn.addEventListener('click', () => { _level = l; buildFilters(); loadLogs(); });
+    lvlEl.appendChild(btn);
+  });
+}
+
+function badgeClass(level) {
+  const map = { info:'badge-info', success:'badge-success', warning:'badge-warning', error:'badge-error', debug:'badge-debug' };
+  return map[level] || 'badge-info';
+}
+
+function renderLogs(entries) {
+  const el = document.getElementById('log-entries');
+  if (!entries.length) {
+    el.innerHTML = `<div style="padding:2.5rem;text-align:center;color:var(--text-muted);font-size:0.85rem;">
+      No log entries match the current filters.</div>`;
+    return;
+  }
+  el.innerHTML = '';
+  entries.forEach(e => {
+    const row = document.createElement('div');
+    row.className = 'log-entry';
+    row.innerHTML = `
+      <div class="log-time">${e.time || ''}</div>
+      <span class="log-badge ${badgeClass(e.level)}">${e.level || 'info'}</span>
+      <span class="cat-badge">${e.category || 'system'}</span>
+      <div class="log-message">${escHtml(e.message || '')}</div>`;
+    el.appendChild(row);
+  });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function loadStats() {
+  try {
+    const d = await apiFetch('/api/logs/stats');
+    _stats = d;
+    document.getElementById('stat-total').textContent    = d.total  || 0;
+    document.getElementById('stat-errors').textContent   = d.by_level?.error   || 0;
+    document.getElementById('stat-warnings').textContent = d.by_level?.warning || 0;
+    document.getElementById('stat-success').textContent  = d.by_level?.success || 0;
+    buildFilters();
+  } catch(e) {}
+}
+
+async function loadLogs() {
+  const el = document.getElementById('log-entries');
+  el.innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:0.82rem;">Loading…</div>';
+  const params = new URLSearchParams();
+  if (_category !== 'all') params.set('category', _category);
+  if (_level    !== 'all') params.set('level',    _level);
+  if (_search)             params.set('search',   _search);
+  params.set('limit', '300');
+  try {
+    const d = await apiFetch('/api/logs?' + params.toString());
+    renderLogs(d.entries || []);
+  } catch(e) {
+    el.innerHTML = `<div style="padding:2rem;text-align:center;color:var(--danger);font-size:0.82rem;">Failed to load logs: ${e.message}</div>`;
+  }
+}
+
+// ── Events ───────────────────────────────────────────────────────────────────
+document.getElementById('refresh-logs-btn').addEventListener('click', async () => {
+  await loadStats(); await loadLogs(); toast('Logs refreshed', 'info', 1500);
+});
+
+document.getElementById('clear-logs-btn').addEventListener('click', () => {
+  document.getElementById('clear-confirm-modal').classList.add('open');
+});
+document.getElementById('cancel-clear-btn').addEventListener('click', () => {
+  document.getElementById('clear-confirm-modal').classList.remove('open');
+});
+document.getElementById('confirm-clear-btn').addEventListener('click', async () => {
+  document.getElementById('clear-confirm-modal').classList.remove('open');
+  try {
+    await apiFetch('/api/logs/clear', { method: 'POST' });
+    toast('Logs cleared.', 'success');
+    await loadStats(); await loadLogs();
+  } catch(e) { toast('Failed: ' + e.message, 'error'); }
+});
+
+let _searchTimer;
+document.getElementById('search-input').addEventListener('input', e => {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => { _search = e.target.value.trim(); loadLogs(); }, 400);
+});
+
+async function init() {
+  buildFilters();
+  await loadStats();
+  await loadLogs();
+}
+init();
+</script>
+{% endblock %}
